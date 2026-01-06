@@ -1,15 +1,114 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AIAssistantCustomInstructionsStorage">
+    <option name="instructions">
+      <map>
+        <entry key="AIAssistant.General.ProjectPrompt">
+          <value>
+            <AIAssistantStoredInstruction>
+              <option name="actionId" value="AIAssistant.General.ProjectPrompt" />
+              <option name="content" value="Dictate each new file that code is for with a comment at the top of the code block, never add comments anywhere else." />
+            </AIAssistantStoredInstruction>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="487655fb-ea47-4dca-b34e-12f79776cac2" name="Changes" comment="" />
+    <list default="true" id="487655fb-ea47-4dca-b34e-12f79776cac2" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.coveragerc" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.editorconfig" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.flake8" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/bug_report.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/config.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/feature_request.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.github/PULL_REQUEST_TEMPLATE.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.github/dependabot.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.github/workflows/automated-checks.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.github/workflows/potential-duplicates.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.github/workflows/release.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/aa-reactions.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.isort.cfg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.pre-commit-config.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/CODE_OF_CONDUCT.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/LICENSE" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/admin.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/app_settings.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/apps.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/auth_hooks.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/forms.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/helper.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/locale/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/management/commands/import_reactions.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/migrations/0001_initial.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/migrations/0002_alter_general_options_and_more.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/migrations/0003_reactionsettings_scrap_metal_processing_level.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/migrations/0004_reactionsettings_buyback_basis_and_more.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/migrations/0005_systemindices_reactionsettings_refine_implant_and_more.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/migrations/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/models.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/pricing.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/providers.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/reactions.jsonl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/static/example/.gitkeep" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/tasks.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/templates/aareactions/_reaction_chains.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/templates/aareactions/base.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/templates/aareactions/input.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/templates/aareactions/result.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/tests/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/tests/test_example.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/urls.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/aareactions/views.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/runtests.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/testauth/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/testauth/celery.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/testauth/settings/base.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/testauth/settings/local.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/testauth/urls.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/testauth/wsgi.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tox.ini" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 0
-}]]></component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="66" />
+    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="HTML File" />
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0
+}</component>
   <component name="ProjectId" id="3440ZmnN9U3T6gaceliyPiIPLfU" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -17,13 +116,44 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true"
+    "DefaultHtmlFileTemplate": "HTML File",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "C:/Users/brood/PycharmProjects/aa-reactions/aareactions/migrations",
+    "settings.editor.selected.configurable": "org.jetbrains.plugins.github.ui.GithubSettingsConfigurable",
+    "to.speed.mode.migration.done": "true"
+  },
+  "keyToStringList": {
+    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
+      "PLAIN_TEXT"
+    ]
   }
 }]]></component>
+  <component name="RecapUselessUpdatesCounter">
+    <option name="suspendCountdown" value="9" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\brood\PycharmProjects\aa-reactions\aareactions\migrations" />
+      <recent name="C:\Users\brood\PycharmProjects\aa-reactions\aareactions" />
+      <recent name="C:\Users\brood\PycharmProjects\aa-reactions\aareactions\templates\aareactions" />
+      <recent name="C:\Users\brood\PycharmProjects\aa-reactions" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\brood\PycharmProjects\aa-reactions\aareactions\templates\aareactions" />
+    </key>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-164cda30dcd9-0af03a5fa574-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-252.26830.99" />
+        <option value="bundled-python-sdk-f2b7a9f6281b-6e1f45a539f7-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.29346.142" />
       </set>
     </attachedChunks>
   </component>

@@ -1,5 +1,5 @@
 """
-Example Test
+Reactions Test
 """
 
 # Django

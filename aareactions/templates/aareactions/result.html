@@ -1,10 +1,657 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "aareactions/base.html" %}
+{% load humanize %}
+{% block content %}
+<div class="container py-4">
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card shadow-sm uniform-card">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-semibold">Inputs</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                {% if selected_system_name %}
+                    <div class="alert alert-secondary d-flex align-items-center" role="alert">
+                        <i class="fa-solid fa-location-dot me-2"></i>
+                        <div>
+                            Selected system: <strong>{{ selected_system_name }}</strong>
+                            {% if selected_reaction_index_pct %}
+                            · Reactions cost index: <strong>{{ selected_reaction_index_pct }}</strong>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+                    {% if refined %}
+                    <div class="col-12 mt-3">
+                        <div class="card shadow-sm uniform-card">
+                            <div class="card-header d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-semibold">Refined Inputs</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <p class="text-muted mb-3">
+                                        Refine rate: <strong>{{ refine_rate }}</strong> ·
+                                        Price basis: <strong>{{ price_basis|title }}</strong>
+                                        {% if refined_totals %}
+                                        · Total Value: <strong>{{ refined_totals.value }}</strong>
+                                        · Total m3: <strong>{{ refined_totals.m3 }}</strong>
+                                        {% endif %}
+                                    </p>
+                                    <table id="refinedTable" class="table table-sm align-middle mb-0 w-100">
+                                        <thead class="table-light">
+                                        <tr>
+                                            <th class="text-dark sort-th" data-col="0" data-type="str">Type</th>
+                                            <th class="text-end text-dark sort-th" data-col="1" data-type="num">Qty</th>
+                                            <th class="text-end text-dark sort-th" data-col="2" data-type="num">Unit Price</th>
+                                            <th class="text-end text-dark sort-th" data-col="3" data-type="num">Value</th>
+                                            <th class="text-end text-dark sort-th" data-col="4" data-type="num">m3</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for r in refined %}
+                                        <tr>
+                                            <td data-val="{{ r.type_name|lower }}">{{ r.type_name }}</td>
+                                            <td class="text-end" data-val="{{ r.qty }}">{{ r.qty|intcomma }}</td>
+                                            <td class="text-end" data-val="{{ r.unit_price|floatformat:2 }}">{{ r.unit_price }}</td>
+                                            <td class="text-end" data-val="{{ r.value|floatformat:2 }}">{{ r.value }}</td>
+                                            <td class="text-end" data-val="{{ r.m3|floatformat:2 }}">{{ r.m3 }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                        <div>No refined materials.</div>
+                    </div>
+                    {% endif %}
+                    {% if direct_inputs and direct_inputs|length > 0 %}
+                    <div class="col-12 mt-3">
+                        <div class="card shadow-sm uniform-card">
+                            <div class="card-header d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-semibold">Direct Reaction Inputs</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <p class="text-muted mb-3">
+                                        Price basis: <strong>{{ price_basis|title }}</strong>
+                                        {% if direct_inputs %}
+                                        · Total Value: <strong>{{ direct_inputs_totals.value }}</strong>
+                                        · Total m3: <strong>{{ direct_inputs_totals.m3 }}</strong>
+                                        {% endif %}
+                                    </p>
+                                    <table class="table table-sm align-middle mb-0 w-100">
+                                        <thead class="table-light">
+                                        <tr>
+                                            <th class="text-dark">Type</th>
+                                            <th class="text-end text-dark">Qty</th>
+                                            <th class="text-end text-dark">Unit Price</th>
+                                            <th class="text-end text-dark">Value</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for r in direct_inputs %}
+                                        <tr>
+                                            <td>{{ r.type_name }}</td>
+                                            <td class="text-end">{{ r.qty|intcomma }}</td>
+                                            <td class="text-end">{{ r.unit_price }}</td>
+                                            <td class="text-end">{{ r.value }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+        {% if unrefinables %}
+        <div class="col-12">
+            <div class="card shadow-sm uniform-card">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-semibold">Unrefinable Inputs</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0 w-100">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Type</th>
+                                <th class="text-end">Qty</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Value</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for u in unrefinables %}
+                            <tr>
+                                <td>{{ u.type_name }}</td>
+                                <td class="text-end">{{ u.qty|intcomma }}</td>
+                                <td class="text-end">{{ u.unit_price }}</td>
+                                <td class="text-end">{{ u.value }}</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if unrefinables_total %}
+                    <div class="text-end mt-2"><span class="small text-muted">Total Value:</span> <strong>{{ unrefinables_total }}</strong></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between mt-4 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-diagram-project text-secondary"></i>
+                    <span class="fw-semibold">Reaction Chains</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <input id="chainFilter" type="search" class="form-control form-control-sm" placeholder="Filter by end product">
+                    <input id="inputMatFilter" type="search" class="form-control form-control-sm" placeholder="Filter by input material">
+                    <select id="chainSort" class="form-select form-select-sm">
+                        <option value="profit">Sort: Final Profit ↓</option>
+                        <option value="value">Sort: Final Value ↓</option>
+                        <option value="name">Sort: End Product A–Z</option>
+                        <option value="isk_per_m3">Sort: Final ISK/m3 ↓</option>
+                        <option value="m3">Sort: Final m3 ↓</option>
+                        <option value="fees">Sort: Final Fees ↓</option>
+                        <option value="time_desc">Sort: Total Time ↓</option>
+                        <option value="time_asc">Sort: Total Time ↑</option>
+                        <option value="need_m3">Sort: Total Need m3 ↓</option>
+                        <option value="need_cost">Sort: Total Need Cost ↓</option>
+                        <option value="margin">Sort: Profit Margin % ↓</option>
+                        <option value="relative">Sort: Profit Relative % ↓</option>
+                        <option value="profit_per_m3">Sort: Profit per m3 ↓</option>
+                        <option value="cost_per_m3">Sort: Cost per m3 ↓</option>
+                        <option value="cost_per_m3_asc">Sort: Cost per m3 ↑</option>
+                    </select>
+                </div>
+            </div>
+            <div id="chainsContainer" class="w-100">
+                {% if chain_groups %}
+                {% for end_name, bundle in chain_groups %}
+                {% for c in bundle %}
+                <div class="mt-3 mb-1 d-flex align-items-center justify-content-between">
+                    <div class="fw-semibold">{{ end_name }}</div>
+                    <div class="small text-muted">Time: <strong>{{ c.total_time_str }}</strong></div>
+                </div>
+                <div class="chain-flow-row">
+                    {% for step in c.steps %}
+                    <div class="card chain-flow-card uniform-card shadow-sm">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div class="fw-semibold">
+                                {{ step.title }}
+                                {% if step.input_totals and step.input_totals.have_value and settings and settings.buyback_enabled %}
+                                    <span class="badge bg-secondary ms-2">Buyback cost</span>
+                                {% endif %}
+                            </div>
+                            <div class="small text-muted">Runs: <strong>{{ step.runs_display|default:step.runs|intcomma }}</strong></div>
+                        </div>
+                        <div class="card-body">
+                            <div class="small text-muted mb-2">Total step time: <strong>
+                                {% if step.time_total_seconds %}{% with t=step.time_total_seconds %}
+                                {% firstof step.time_total_str %}
+                                {% endwith %}
+                                {% else %}
+                                0s
+                                {% endif %}
+                            </strong>
+                            </div>
+                            <div class="mb-2 fw-semibold">Inputs</div>
+                            {% for m in step.inputs %}
+                            <ul class="ms-0">
+                                <li class="fw-semibold">{{ m.name }}
+                                    <ul class="ms-3">
+                                        <li>Per Run Needed: <span class="small text-muted">{{ m.need_per_run|intcomma }}</span></li>
+
+                                        {% if m.from_children %}
+                                        <li>From Feeders: <span class="small text-primary">{{ m.from_children|intcomma }}</span></li>
+                                        {% endif %}
+                                        {% if m.from_stock %}
+                                        <li>From Stock: <span class="small text-success">{{ m.from_stock|intcomma }}</span></li>
+                                        {% endif %}
+
+                                        <li>Have: <span class="small text-success">{{ m.have|intcomma }}</span>
+                                        {% if m.have > 0 and m.buyback_value %}
+                                            <ul class="ms-3">
+                                                <li>
+                                                    Cost: <span class="text-muted">{{ m.buyback_value|intcomma }}</span>
+                                                </li>
+                                            </ul>
+                                        {% endif %}
+                                        </li>
+                                        {% if m.need_missing > 0 %}
+                                        <li>Need: <span class="small text-danger">{{ m.need_missing|intcomma }}</span>
+                                            <ul class="ms-3">
+                                                <li>Value: <span class="small text-muted">{{ m.need_value }}</span></li>
+                                            </ul>
+                                        </li>
+                                        {% endif %}
+
+                                        <li>Unit Price: <span class="small text-muted">{{ m.unit_price }}</span></li>
+                                        <li>m3: <span class="small text-muted">{{ m.m3_total }}</span></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                            {% endfor %}
+
+                            {% if step.kind == 'reprocess' and step.outputs %}
+                            <div class="mt-2">
+                                <div class="font-semibold">Outputs</div>
+                                <ul>
+                                    {% for o in step.outputs %}
+                                    <li>{{ o.name }}</li>
+                                    <ul>
+                                        <li>Qty: <span class="text-sm text-gray-400">{{ o.qty|intcomma }}</span></li>
+                                        <li>Unite Price: <span class="text-sm text-gray-400">{{ o.unit_price }}</span></li>
+                                        <li>Total Value: <span class="text-sm text-gray-400">{{ o.value }}</span></li>
+                                        <li>Total m3: <span class="text-sm text-gray-400">{{ o.m3 }}</span></li>
+                                    </ul>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+
+                            <ul class="ms-0">
+                                <li>Step Fees: <span class="small text-muted">{{ step.input_totals.fees }}</span></li>
+                                <li class="fw-semibold mt-2">{{ step.product_name }}
+                                    <ul class="ms-3">
+                                        <li>Qty: <span class="small text-muted">{{ step.produced_qty|intcomma }}</span></li>
+                                        <li>Value: <span class="small text-muted">{{ step.product_stats.value }}</span></li>
+                                        <li>ISK/m3: <span class="small text-muted">{{ step.product_stats.isk_per_m3 }}</span></li>
+                                        <li>m3: <span class="small text-muted">{{ step.product_stats.m3 }}</span></li>
+                                    </ul>
+                                </li>
+                                <li>Step Value Change: <span class="small {% if step.step_profit > 0 %}text-success{% elif step.step_profit < 0 %}text-danger{% else %}text-muted{% endif %}">{{ step.step_profit_display }}</span></li>
+                                <li>Step Need m3: <span class="small text-muted">{{ step.input_totals.m3_need_total }}</span></li>
+                                <li>Step m3 Total: <span class="small text-muted">{{ step.input_totals.m3_total }}</span></li>
+                                <li>Step Have Value: <span class="small text-muted">{{ step.input_totals.have_value }}</span></li>
+                                <li>Step Need Value: <span class="small text-muted">{{ step.input_totals.need_value }}</span></li>
+                            </ul>
+                        </div>
+                        <div class="card-footer small d-flex justify-content-between">
+                            <div>Step Fees: <strong>{{ step.fees_display }}</strong></div>
+                            <div>Step Profit: <strong>{{ step.cumulative_profit_display }}</strong></div>
+                        </div>
+                    </div>
+                        {% if not forloop.last and step.show_arrow_after %}
+                    <div class="chain-arrow">
+                        <div class="shaft"></div>
+                        <div class="head"></div>
+                    </div>
+                        {% endif %}
+                    {% endfor %}
+                    <div class="chain-arrow">
+                        <div class="shaft"></div>
+                        <div class="head"></div>
+                    </div>
+                    <div class="card chain-flow-card uniform-card shadow-sm">
+                        <div class="card-header">
+                            <div class="fw-semibold">Final</div>
+                        </div>
+                        <div class="card-body">
+                            <ul class="mb-0">
+                                <li>Final Value: <span class="text-muted">{{ c.final_value }}</span></li>
+                                <li>Final ISK/m3: <span class="text-muted">{{ c.final_isk_per_m3 }}</span></li>
+                                <li>Final m3: <span class="text-muted">{{ c.final_volume }}</span></li>
+                                <li>Final Fees: <span class="text-danger">{{ c.final_fees }}</span></li>
+                                <li class="mt-2">
+                                    <details>
+                                        <summary class="small text-muted">Debug: Fees breakdown and formulas</summary>
+                                        <div class="mt-2 small">
+                                            {% if c.debug_fees_explained %}
+                                                <div class="mb-2">{{ c.debug_fees_explained.notes }}</div>
+                                                <div class="fw-semibold">Variables</div>
+                                                <ul class="mb-2">
+                                                    <li>Total Need Cost: {{ c.debug_fees_explained.variables.total_needed_cost }}</li>
+                                                    <li>Stock Value Used: {{ c.debug_fees_explained.variables.total_stock_value_used }}</li>
+                                                    <li>Final Value (gross): {{ c.debug_fees_explained.variables.final_value_gross }}</li>
+                                                    <li>Sum of Step Input Fees: {{ c.debug_fees_explained.variables.sum_step_fees_inputs }}</li>
+                                                    <li>SCC: {{ c.debug_fees_explained.variables.scc_pct }}</li>
+                                                    <li>Facility Tax: {{ c.debug_fees_explained.variables.facility_tax_pct }}</li>
+                                                    <li>Cost Index: {{ c.debug_fees_explained.variables.cost_index_pct }}</li>
+                                                    <li>Broker Fee: {{ c.debug_fees_explained.variables.broker_fee_pct }}</li>
+                                                    <li>Sales Tax: {{ c.debug_fees_explained.variables.sales_tax_pct }}</li>
+                                                    <li>Output Price Basis: {{ c.debug_fees_explained.variables.output_price_basis|title }}</li>
+                                                </ul>
+                                                <div class="fw-semibold">Formulas</div>
+                                                <ul>
+                                                    <li>{{ c.debug_fees_explained.formulas.per_step_input_fees }}</li>
+                                                    <li>Final Fees (numeric): {{ c.final_fees }}</li>
+                                                    <li>Produced Net if Buy: {{ c.debug_fees_explained.formulas.produced_net_buy }}</li>
+                                                    <li>Produced Net if Sell: {{ c.debug_fees_explained.formulas.produced_net_sell }}</li>
+                                                    <li>{{ c.debug_fees_explained.formulas.final_profit }}</li>
+                                                    <li>Final Profit (numeric): {{ c.debug_fees_explained.formulas.final_profit_numeric }}</li>
+                                                </ul>
+                                            {% else %}
+                                                <div class="text-muted">No debug info.</div>
+                                            {% endif %}
+                                        </div>
+                                    </details>
+                                </li>
+                                <li>Final Profit:
+                                    {% if c.final_profit_unformatted > 0 %}
+                                        <span class="text-success">{{ c.final_profit }}</span>
+                                    {% else %}
+                                        <span class="text-danger">{{ c.final_profit }}</span>
+                                    {% endif %}
+                                </li>
+                                <li>Total Time: <span class="text-muted">{{ c.total_time_str }}</span></li>
+                                <li>Total Need m3: <span class="text-muted">{{ c.final_need_m3 }}</span></li>
+                                <li>Total Need Cost: <span class="text-danger">{{ c.final_need_cost }}</span></li>
+                                <li>Profit Margin:
+                                    {% if c.profit_margin_unformatted|default:0 > 0 %}
+                                        <span class="text-success">{{ c.profit_margin }}%</span>
+                                    {% elif c.profit_margin_unformatted|default:0 < 0 %}
+                                        <span class="text-danger">{{ c.profit_margin }}%</span>
+                                    {% else %}
+                                        <span class="text-muted">{{ c.profit_margin }}%</span>
+                                    {% endif %}
+                                </li>
+                                <li>Profit Relative to Cost:
+                                    {% if c.profit_relative_unformatted|default:0 > 0 %}
+                                        <span class="text-success">{{ c.profit_relative }}%</span>
+                                    {% elif c.profit_relative_unformatted|default:0 < 0 %}
+                                        <span class="text-danger">{{ c.profit_relative }}%</span>
+                                    {% else %}
+                                        <span class="text-muted">{{ c.profit_relative }}%</span>
+                                    {% endif %}
+                                </li>
+                                <li>Input Cost Share Total Value: <span class="text-danger">{{ c.input_cost_share_total_value }}%</span></li>
+                                <li>Profit per m3:
+                                    {% if c.profit_per_m3_unformatted|default:0 > 0 %}
+                                        <span class="text-success">{{ c.profit_per_m3|intcomma }}</span>
+                                    {% elif c.profit_per_m3_unformatted|default:0 < 0 %}
+                                        <span class="text-danger">{{ c.profit_per_m3|intcomma }}</span>
+                                    {% else %}
+                                        <span class="text-muted">{{ c.profit_per_m3|intcomma }}</span>
+                                    {% endif %}
+                                </li>
+                                <li>Cost per m3: <span class="text-danger">{{ c.cost_per_m3|intcomma }}</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endfor %}
+                {% else %}
+                <div class="alert alert-info d-flex align-items-center" role="alert">
+                    <i class="fa-solid fa-circle-info me-2"></i>
+                    <div>No reaction chains.</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="card mt-4 uniform-card">
+                <div class="card-body d-flex justify-content-between">
+                    <div class="small">Chains total time: <strong>{{ chains_total_time_str }}</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    :root{ --chain-card-width: 420px; }
+    .uniform-card{ width:100%; }
+    #chainsContainer .chain-flow-row{display:flex;gap:1rem;overflow-x:auto;padding:0.75rem 0;align-items:stretch}
+    #chainsContainer .card.chain-flow-card{width:var(--chain-card-width);min-width:var(--chain-card-width);max-width:var(--chain-card-width);flex:0 0 var(--chain-card-width)}
+    .chain-arrow{display:flex;align-items:center;justify-content:center;min-width:72px;flex:0 0 72px}
+    .chain-arrow .shaft{position:relative;width:48px;height:2px;background:rgba(125,130,150,.55)}
+    .chain-arrow .head{width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-left:10px solid rgba(125,130,150,.55);margin-left:-2px}
+    .col-12 > .card{width:100%}
+    .container { max-width: 95%; }
+</style>
+
+<script>
+    document.querySelectorAll('.sort-th').forEach(function(th){
+      th.addEventListener('click',function(){
+        var table = th.closest('table');
+        var tbody = table.querySelector('tbody');
+        var col = parseInt(th.getAttribute('data-col'));
+        var type = th.getAttribute('data-type');
+        var rows = Array.from(tbody.querySelectorAll('tr'));
+        var asc = th.dataset.asc === '1' ? false : true;
+        rows.sort(function(a,b){
+          var av = a.children[col].getAttribute('data-val') || a.children[col].innerText.trim();
+          var bv = b.children[col].getAttribute('data-val') || b.children[col].innerText.trim();
+          if(type === 'num'){ av = parseFloat(av); bv = parseFloat(bv); }
+          if(type === 'str'){ av = av.toString(); bv = bv.toString(); }
+          if(av < bv) return asc ? -1 : 1;
+          if(av > bv) return asc ? 1 : -1;
+          return 0;
+        });
+        th.dataset.asc = asc ? '1' : '0';
+        rows.forEach(function(r){ tbody.appendChild(r); });
+      });
+    });
+
+    (function(){
+      var filter = document.getElementById('chainFilter');
+      var inputMatFilter = document.getElementById('inputMatFilter');
+      var sortSel = document.getElementById('chainSort');
+      var container = document.getElementById('chainsContainer');
+      if(!container) return;
+
+      function textIncludes(hay, needle){
+        if(!needle) return true;
+        return (hay || '').toLowerCase().indexOf((needle||'').toLowerCase()) !== -1;
+      }
+
+      function collectInputsForRow(row){
+        // All input material names within this chain row
+        var names = [];
+        row.querySelectorAll('.card.chain-flow-card .card-body ul.ms-0 > li.fw-semibold').forEach(function(li){
+          var n = li.firstChild && li.firstChild.nodeType === 3 ? li.firstChild.nodeValue : '';
+          if(n) names.push(n.trim().toLowerCase());
+        });
+        // Fallback: grab any list item that starts an input block
+        if(names.length === 0){
+          row.querySelectorAll('.card.chain-flow-card .card-body li.fw-semibold').forEach(function(li){
+            var t = (li.textContent || '').split('\n')[0].trim().toLowerCase();
+            if(t) names.push(t);
+          });
+        }
+        return Array.from(new Set(names));
+      }
+
+      function numFromLi(finalCard, labelRegex){
+        var li = finalCard ? Array.from(finalCard.querySelectorAll('li')).find(function(x){
+          return labelRegex.test(x.textContent);
+        }) : null;
+        if(!li) return 0;
+        var s = li.textContent.replace(/[^0-9.\-]/g,'');
+        var v = parseFloat(s);
+        return isNaN(v) ? 0 : v;
+      }
+
+      function timeSecondsFromFinal(finalCard){
+        var li = finalCard ? Array.from(finalCard.querySelectorAll('li')).find(function(x){
+          return /Total Time:/i.test(x.textContent);
+        }) : null;
+        if(!li) return 0;
+        var t = (li.textContent || '').toLowerCase();
+        var d = (t.match(/(\d+)\s*d/) || [0,0])[1]|0;
+        var h = (t.match(/(\d+)\s*h/) || [0,0])[1]|0;
+        var m = (t.match(/(\d+)\s*m(?![s])/ ) || [0,0])[1]|0;
+        var s = (t.match(/(\d+)\s*s/) || [0,0])[1]|0;
+        return d*86400 + h*3600 + m*60 + s;
+      }
+
+      function pctFromLi(finalCard, labelRegex){
+        var li = finalCard ? Array.from(finalCard.querySelectorAll('li')).find(function(x){
+          return labelRegex.test(x.textContent);
+        }) : null;
+        if(!li) return 0;
+        var s = li.textContent.replace(/[^0-9.\-]/g,'');
+        var v = parseFloat(s);
+        return isNaN(v) ? 0 : v;
+      }
+
+      function allChains(){
+        return Array.from(container.querySelectorAll('.chain-flow-row')).map(function(row){
+          var header = row.previousElementSibling;
+          var endName = header ? header.querySelector('.fw-semibold')?.textContent.trim().toLowerCase() : '';
+          var finalCard = row.querySelector('.card.chain-flow-card:last-of-type');
+          var value = numFromLi(finalCard, /Final Value:/i);
+          var profit = numFromLi(finalCard, /Final Profit:/i);
+          var isk_per_m3 = numFromLi(finalCard, /Final ISK\/m3:/i);
+          var m3 = numFromLi(finalCard, /Final m3:/i);
+          var fees = numFromLi(finalCard, /Final Fees:/i);
+          var time_sec = timeSecondsFromFinal(finalCard);
+          var need_m3 = numFromLi(finalCard, /Total Need m3:/i);
+          var need_cost = numFromLi(finalCard, /Total Need Cost:/i);
+          var margin = pctFromLi(finalCard, /Profit Margin:/i);
+          var relative = pctFromLi(finalCard, /Profit Relative:/i);
+          var profit_per_m3 = numFromLi(finalCard, /Profit per m3:/i);
+          var cost_per_m3 = numFromLi(finalCard, /Cost per m3:/i);
+          var inputNames = collectInputsForRow(row);
+          return {
+            row: row, endName: endName, inputNames: inputNames,
+            profit: profit, value: value,
+            isk_per_m3: isk_per_m3, m3: m3, fees: fees,
+            time_sec: time_sec, need_m3: need_m3, need_cost: need_cost,
+            margin: margin, relative: relative, profit_per_m3: profit_per_m3, cost_per_m3: cost_per_m3
+          };
+        });
+      }
+
+      function applyFilter(){
+        var qEnd = (filter?.value || '').toLowerCase().trim();
+        var qMat = (inputMatFilter?.value || '').toLowerCase().trim();
+        allChains().forEach(function(info){
+          var matchesEnd = !qEnd || info.endName.indexOf(qEnd) !== -1;
+          var matchesMat = !qMat || info.inputNames.some(function(n){ return n.indexOf(qMat) !== -1; });
+          var show = matchesEnd && matchesMat;
+          var header = info.row.previousElementSibling;
+          info.row.style.display = show ? '' : 'none';
+          if(header) header.style.display = show ? '' : 'none';
+        });
+      }
+
+      function applySort(){
+        var mode = (sortSel?.value || 'profit');
+        var containerEl = container;
+        var pairs = [];
+        var cursor = containerEl.firstElementChild;
+        while(cursor){
+          if(cursor.classList.contains('mt-3') || cursor.classList.contains('mb-1')){
+            var header = cursor;
+            var row = header.nextElementSibling;
+            if(row && row.classList.contains('chain-flow-row')){
+              pairs.push({header: header, row: row});
+              cursor = row.nextElementSibling;
+              continue;
+            }
+          }
+          cursor = cursor.nextElementSibling;
+        }
+        var infos = allChains();
+        var mapped = pairs.map(function(pair){
+          var i = infos.find(function(x){ return x.row === pair.row; }) || {
+            profit:0,value:0,endName:'',isk_per_m3:0,m3:0,fees:0,time_sec:0,need_m3:0,need_cost:0,margin:0,relative:0,profit_per_m3:0,cost_per_m3:0,inputNames:[]
+          };
+          return {
+            header: pair.header, row: pair.row, name: i.endName,
+            profit: i.profit, value: i.value,
+            isk_per_m3: i.isk_per_m3, m3: i.m3, fees: i.fees,
+            time_sec: i.time_sec, need_m3: i.need_m3, need_cost: i.need_cost,
+            margin: i.margin, relative: i.relative, profit_per_m3: i.profit_per_m3, cost_per_m3: i.cost_per_m3,
+            inputNames: i.inputNames
+          };
+        });
+        mapped.sort(function(a,b){
+          function byNameAsc(x,y){ if(x.name<y.name) return -1; if(x.name>y.name) return 1; return 0; }
+          function tie(x,y){
+            if(y.profit !== x.profit) return y.profit - x.profit;
+            if(y.value !== x.value) return y.value - x.value;
+            return byNameAsc(x,y);
+          }
+          if(mode === 'profit'){ return tie(a,b); }
+          if(mode === 'value'){
+            if(b.value !== a.value) return b.value - a.value;
+            return tie(a,b);
+          }
+          if(mode === 'isk_per_m3'){
+            if(b.isk_per_m3 !== a.isk_per_m3) return b.isk_per_m3 - a.isk_per_m3;
+            return tie(a,b);
+          }
+          if(mode === 'm3'){
+            if(b.m3 !== a.m3) return b.m3 - a.m3;
+            return tie(a,b);
+          }
+          if(mode === 'fees'){
+            if(b.fees !== a.fees) return b.fees - a.fees;
+            return tie(a,b);
+          }
+          if(mode === 'time_desc'){
+            if(b.time_sec !== a.time_sec) return b.time_sec - a.time_sec;
+            return tie(a,b);
+          }
+          if(mode === 'time_asc'){
+            if(a.time_sec !== b.time_sec) return a.time_sec - b.time_sec;
+            return tie(a,b);
+          }
+          if(mode === 'need_m3'){
+            if(b.need_m3 !== a.need_m3) return b.need_m3 - a.need_m3;
+            return tie(a,b);
+          }
+          if(mode === 'need_cost'){
+            if(b.need_cost !== a.need_cost) return b.need_cost - a.need_cost;
+            return tie(a,b);
+          }
+          if(mode === 'margin'){
+            if(b.margin !== a.margin) return b.margin - a.margin;
+            return tie(a,b);
+          }
+          if(mode === 'relative'){
+            if(b.relative !== a.relative) return b.relative - a.relative;
+            return tie(a,b);
+          }
+          if(mode === 'profit_per_m3'){
+            if(b.profit_per_m3 !== a.profit_per_m3) return b.profit_per_m3 - a.profit_per_m3;
+            return tie(a,b);
+          }
+          if(mode === 'cost_per_m3'){
+            if(b.cost_per_m3 !== a.cost_per_m3) return b.cost_per_m3 - a.cost_per_m3;
+            return tie(a,b);
+          }
+          if(mode === 'cost_per_m3_asc'){
+            if(a.cost_per_m3 !== b.cost_per_m3) return a.cost_per_m3 - b.cost_per_m3;
+            return tie(a,b);
+          }
+          return byNameAsc(a,b);
+        });
+        mapped.forEach(function(m){
+          containerEl.appendChild(m.header);
+          containerEl.appendChild(m.row);
+        });
+      }
+
+      if(filter) filter.addEventListener('input', applyFilter);
+      if(inputMatFilter) inputMatFilter.addEventListener('input', applyFilter);
+      if(sortSel) sortSel.addEventListener('change', function(){ applySort(); applyFilter(); });
+      applyFilter();
+      applySort();
+    })();
+</script>
+{% endblock %}

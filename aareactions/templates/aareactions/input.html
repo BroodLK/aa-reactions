@@ -1,91 +1,140 @@
-<!-- templates/reprocessor/input.html -->
-{% extends "base.html" %}
+{% extends "aareactions/base.html" %}
+{% load humanize %}
 {% block content %}
-<h2>Refine & Reaction Planner</h2>
-<form method="post">
-  {% csrf_token %}
-  <div>
-    {{ form.lines.label_tag }}<br />
-    {{ form.lines }}
-  </div>
-  <div style="margin-top:8px">
-    {{ form.refine_rate.label_tag }}<br />
-    {{ form.refine_rate }}
-  </div>
-  <div style="margin-top:12px">
-    <button type="submit">Plan</button>
-  </div>
-</form>
+<div class="container py-4">
+  <div class="row g-4">
+    <div class="col-12 col-lg-10 mx-auto">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">Input</span>
+        </div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="form-label" for="system_name">Solar System</label>
+              <input id="system_name" type="text" class="form-control" placeholder="Start typing (e.g., Jita, Amarr)…" autocomplete="off">
+              {{ form.solar_system_id }}
+              <div class="form-text">Pick a solar system; we’ll fetch its Industry (Reactions) cost index from ESI.</div>
+              <div id="system_results" class="list-group mt-2" style="max-height:220px; overflow:auto; display:none;"></div>
+            </div>
 
-{% if refined %}
-<hr />
-<h3>Refined Stock (after rate {{ refine_rate }})</h3>
-<table>
-  <tr><th>Type</th><th>Qty</th></tr>
-  {% for r in refined %}
-  <tr><td>{{ r.type_name }}</td><td>{{ r.qty }}</td></tr>
-  {% endfor %}
-</table>
-{% endif %}
+            <div class="mb-3">
+              {{ form.lines.label_tag }}{{ form.lines }}
+              <div class="form-text">{{ form.lines.help_text }}</div>
+            </div>
+            <div class="row g-3">
+              <div class="col-6 col-md-3">
+                <label class="form-label">Refine rate (%)</label>
+                {{ form.refine_rate }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Scrap metal processing</label>
+                {{ form.scrap_metal_processing_level }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Input method</label>
+                {{ form.input_price_basis }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Output method</label>
+                {{ form.output_price_basis }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Broker fee (%)</label>
+                {{ form.broker_fee_pct }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Accounting level</label>
+                {{ form.accounting_level }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Reaction skill</label>
+                {{ form.reaction_skill_level }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Facility size</label>
+                {{ form.facility_size }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Facility location</label>
+                {{ form.facility_location }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">ME rig</label>
+                {{ form.rig_me }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">TE rig</label>
+                {{ form.rig_te }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Facility tax (%)</label>
+                {{ form.facility_tax_pct }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Cost index (%)</label>
+                {{ form.cost_index_pct }}
+              </div>
+            </div>
 
-{% if plans %}
-<hr />
-<h3>Reaction Plans (two-pass chain)</h3>
-{% for p in plans %}
-<div style="margin:10px 0;padding:8px;border:1px solid #ddd">
-  <strong>{{ p.name }}</strong> — Runs: {{ p.runs }}
-  {% if p.consumed %}
-  <div>Consumed:</div>
-  <ul>
-    {% for c in p.consumed %}
-    <li>{{ c.type_name }} × {{ c.qty }}</li>
-    {% endfor %}
-  </ul>
-  {% endif %}
-  {% if p.products %}
-  <div>Products:</div>
-  <ul>
-    {% for pr in p.products %}
-    <li>{{ pr.type_name }} × {{ pr.qty }}</li>
-    {% endfor %}
-  </ul>
-  {% endif %}
-  {% if p.missing %}
-  <div>Missing:</div>
-  <ul>
-    {% for m in p.missing %}
-    <li>{{ m.type_name }} × {{ m.qty }}</li>
-    {% endfor %}
-  </ul>
-  {% endif %}
+            <div class="mt-3 form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="use_buyback_for_stock" name="use_buyback_for_stock"
+                     {% if settings and settings.buyback_enabled %}checked{% endif %}>
+              <label class="form-check-label" for="use_buyback_for_stock">
+                Treat my starting stock as purchased via buyback ({{ settings.buyback_pct|default:"90.00" }}% {{ settings.buyback_basis|default:"buy"|title }})
+              </label>
+            </div>
+
+            <div class="mt-4">
+              <button class="btn btn-primary">Calculate</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-{% endfor %}
-{% endif %}
 
-{% if leftovers %}
-<hr />
-<h3>Leftovers</h3>
-<table>
-  <tr><th>Type</th><th>Qty</th></tr>
-  {% for r in leftovers %}
-  <tr><td>{{ r.type_name }}</td><td>{{ r.qty }}</td></tr>
-  {% endfor %}
-</table>
-{% endif %}
+<script>
+(function() {
+  const input = document.getElementById('system_name');
+  const list = document.getElementById('system_results');
+  const hiddenId = document.getElementById('id_solar_system_id');
 
-{% if suggestions %}
-<hr />
-<h3>Suggestions</h3>
-{% for s in suggestions %}
-<div style="margin:10px 0;padding:8px;border:1px solid #ddd">
-  <strong>{{ s.reaction_name }}</strong>
-  <div>Missing to enable:</div>
-  <ul>
-    {% for m in s.missing %}
-    <li>{{ m.type_name }} × {{ m.qty }}</li>
-    {% endfor %}
-  </ul>
-</div>
-{% endfor %}
-{% endif %}
+  let controller = null;
+  function render(items) {
+    list.innerHTML = '';
+    if (!items.length) { list.style.display = 'none'; return; }
+    items.forEach(it => {
+      const a = document.createElement('a');
+      a.className = 'list-group-item list-group-item-action';
+      a.href = '#';
+      a.textContent = it.text;
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        input.value = it.text;
+        hiddenId.value = it.id;
+        list.style.display = 'none';
+      });
+      list.appendChild(a);
+    });
+    list.style.display = 'block';
+  }
+
+  input.addEventListener('input', async () => {
+    const q = input.value.trim();
+    hiddenId.value = '';
+    if (q.length < 2) { list.style.display = 'none'; return; }
+    try {
+      if (controller) controller.abort();
+      controller = new AbortController();
+      const res = await fetch(`{% url 'aareactions:solar-system-search' %}?q=${encodeURIComponent(q)}`, {signal: controller.signal});
+      if (!res.ok) return;
+      const data = await res.json();
+      render(data || []);
+    } catch(e) { /* ignore */ }
+  });
+})();
+</script>
 {% endblock %}

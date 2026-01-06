@@ -1,13 +1,12 @@
-"""App URLs"""
-
-# Django
 from django.urls import path
+from .apps import ReactionsConfig
+from .views import InputView, solar_system_search, add_character_token
 
-# AA Example App
-from example import views
 
-app_name: str = "example"
+app_name = ReactionsConfig.name
 
 urlpatterns = [
-    path("", views.index, name="index"),
+    path("", InputView.as_view(), name="index"),
+    path("systems/search/", solar_system_search, name="solar-system-search"),
+    path("character/add/", add_character_token, name="add_character")
 ]
