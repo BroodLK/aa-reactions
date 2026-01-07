@@ -257,13 +257,13 @@
                                 <div class="font-semibold">Outputs</div>
                                 <ul>
                                     {% for o in step.outputs %}
-                                    <li>{{ o.name }}</li>
-                                    <ul>
-                                        <li>Qty: <span class="text-sm text-gray-400">{{ o.qty|intcomma }}</span></li>
-                                        <li>Unite Price: <span class="text-sm text-gray-400">{{ o.unit_price }}</span></li>
-                                        <li>Total Value: <span class="text-sm text-gray-400">{{ o.value }}</span></li>
-                                        <li>Total m3: <span class="text-sm text-gray-400">{{ o.m3 }}</span></li>
-                                    </ul>
+                                    <li>{{ o.name }}
+                                        <ul>
+                                            <li>Qty: <span class="text-sm text-gray-400">{{ o.qty|intcomma }}</span></li>
+                                            <li>Unite Price: <span class="text-sm text-gray-400">{{ o.unit_price }}</span></li>
+                                            <li>Total Value: <span class="text-sm text-gray-400">{{ o.value }}</span></li>
+                                            <li>Total m3: <span class="text-sm text-gray-400">{{ o.m3 }}</span></li>
+                                        </ul>
                                     </li>
                                     {% endfor %}
                                 </ul>

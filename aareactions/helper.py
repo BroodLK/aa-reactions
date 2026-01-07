@@ -111,7 +111,7 @@ def parse_input_lines(raw: str) -> List[Tuple[str, int]]:
             pass
         if last:
             qty = _parse_number_token(last.group(0))
-            name = line[: last.start()].strip()
+            name = line[: last.start()].strip().rstrip(",").strip()
             if name:
                 add(name, qty)
             continue
@@ -170,14 +170,28 @@ def apply_me_to_requirements(per_run_requirements: Dict[int, int], me_pct: Decim
 
 def resolve_types(pairs: Iterable[Tuple[str, int]]) -> List[ParsedLine]:
     by_name: Dict[str, int] = {}
-    for name, qty in pairs:
-        if not name:
+    by_id: Dict[int, int] = {}
+    for name_or_id, qty in pairs:
+        if not name_or_id:
             continue
-        by_name[name] = by_name.get(name, 0) + int(qty)
-    qs = EveType.objects.filter(name__in=list(by_name.keys())).only(
+        try:
+            tid = int(str(name_or_id))
+            by_id[tid] = by_id.get(tid, 0) + int(qty)
+        except ValueError:
+            by_name[name_or_id] = by_name.get(name_or_id, 0) + int(qty)
+
+    qs_name = EveType.objects.filter(name__in=list(by_name.keys())).only(
         "id", "name", "eve_group_id", "portion_size", "volume"
     )
-    return [ParsedLine(evetype=et, quantity=by_name.get(et.name, 0)) for et in qs]
+    qs_id = EveType.objects.filter(id__in=list(by_id.keys())).only(
+        "id", "name", "eve_group_id", "portion_size", "volume"
+    )
+    out = []
+    for et in qs_name:
+        out.append(ParsedLine(evetype=et, quantity=by_name.get(et.name, 0)))
+    for et in qs_id:
+        out.append(ParsedLine(evetype=et, quantity=by_id.get(et.id, 0)))
+    return out
 
 def categorize_items(items: List[ParsedLine]) -> List[ParsedItem]:
     ids = [p.evetype.id for p in items]

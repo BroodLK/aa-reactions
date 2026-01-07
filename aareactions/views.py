@@ -340,6 +340,27 @@ class InputView(View):
             for t in EveType.objects.filter(id__in=list(type_ids)).only("id", "name", "volume", "portion_size")
         }
 
+        unrefinables = []
+        unref_total_val = Decimal("0")
+        for tid in extra_ids:
+            et = type_map.get(tid)
+            if not et:
+                continue
+            qty = stock.get(tid, 0)
+            up = price_input(int(tid), input_basis)
+            val = up * Decimal(qty)
+            unrefinables.append(
+                {
+                    "type_id": tid,
+                    "type_name": et.name,
+                    "qty": qty,
+                    "unit_price": f"{up:,.2f}",
+                    "value": f"{val:,.2f}",
+                    "m3": f"{(Decimal(getattr(et, 'volume', 0) or 0) * Decimal(qty)):,.2f}",
+                }
+            )
+            unref_total_val += val
+
         refined_rows = []
         total_val = Decimal("0")
         total_m3 = Decimal("0")
@@ -1038,6 +1059,7 @@ class InputView(View):
             "direct_inputs_totals": {"value": f"{direct_inputs_total:,.2f}", "m3": f"{direct_inputs_total_m3:,.2f}"},
             "selected_system_name": selected_system_name,
             "selected_reaction_index_pct": f"{selected_reaction_index_pct:,.3f}%" if selected_reaction_index_pct is not None else None,
-
+            "unrefinables": unrefinables,
+            "unrefinables_total": {"value": f"{unref_total_val:,.2f}"},
         }
         return render(request, "aareactions/result.html", context)
