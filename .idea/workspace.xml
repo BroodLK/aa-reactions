@@ -18,12 +18,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="487655fb-ea47-4dca-b34e-12f79776cac2" name="Changes" comment="Initial">
+    <list default="true" id="487655fb-ea47-4dca-b34e-12f79776cac2" name="Changes" comment="maybe fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/aareactions/helper.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/helper.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/templates/aareactions/_reaction_chains.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/templates/aareactions/result.html" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/templates/aareactions/result.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -93,10 +90,10 @@
 }</component>
   <component name="RecapSpentCounter">
     <option name="endsOfQuotaMs" value="1769612424816" />
-    <option name="spentUsd" value="0.007553" />
+    <option name="spentUsd" value="0.01665925" />
   </component>
   <component name="RecapUselessUpdatesCounter">
-    <option name="suspendCountdown" value="6" />
+    <option name="suspendCountdown" value="4" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
@@ -112,7 +109,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-f2b7a9f6281b-6e1f45a539f7-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.29346.142" />
+        <option value="bundled-python-sdk-ca5e2b39c7df-6e1f45a539f7-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.29346.308" />
       </set>
     </attachedChunks>
   </component>
@@ -132,11 +129,20 @@
       <option name="project" value="LOCAL" />
       <updated>1767715411473</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="maybe fix">
+      <option name="closed" value="true" />
+      <created>1767826044647</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1767826044647</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial" />
-    <option name="LAST_COMMIT_MESSAGE" value="Initial" />
+    <MESSAGE value="maybe fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="maybe fix" />
   </component>
 </project>

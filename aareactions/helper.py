@@ -180,6 +180,7 @@ def resolve_types(pairs: Iterable[Tuple[str, int]]) -> List[ParsedLine]:
         except ValueError:
             by_name[name_or_id] = by_name.get(name_or_id, 0) + int(qty)
 
+    # First try exact match
     qs_name = EveType.objects.filter(name__in=list(by_name.keys())).only(
         "id", "name", "eve_group_id", "portion_size", "volume"
     )
@@ -187,8 +188,30 @@ def resolve_types(pairs: Iterable[Tuple[str, int]]) -> List[ParsedLine]:
         "id", "name", "eve_group_id", "portion_size", "volume"
     )
     out = []
+    matched_names = set()
     for et in qs_name:
         out.append(ParsedLine(evetype=et, quantity=by_name.get(et.name, 0)))
+        matched_names.add(et.name)
+
+    # Try case-insensitive match for unmatched names
+    unmatched = {k: v for k, v in by_name.items() if k not in matched_names}
+    if unmatched:
+        from django.db.models import Q
+        name_lower_map = {k.lower(): (k, v) for k, v in unmatched.items()}
+        # Build Q objects for case-insensitive OR query
+        q_objects = Q()
+        for name in unmatched.keys():
+            q_objects |= Q(name__iexact=name)
+        if q_objects:
+            qs_iname = EveType.objects.filter(q_objects).only(
+                "id", "name", "eve_group_id", "portion_size", "volume"
+            )
+            for et in qs_iname:
+                input_name_lower = et.name.lower()
+                if input_name_lower in name_lower_map:
+                    _, qty = name_lower_map[input_name_lower]
+                    out.append(ParsedLine(evetype=et, quantity=qty))
+
     for et in qs_id:
         out.append(ParsedLine(evetype=et, quantity=by_id.get(et.id, 0)))
     return out
