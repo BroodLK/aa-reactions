@@ -535,18 +535,7 @@ class InputView(View):
             if origin_stock_remaining is None:
                 origin_stock_remaining = {int(k): int(v) for k, v in current_stock.items()}
 
-            display_target_runs = 0
-            for _tid, _need in per_run_reqs.items():
-                if int(_need) <= 0:
-                    continue
-                t_i = int(_tid)
-                et_i = type_map.get(t_i)
-                if et_i and "fuel block" in (et_i.name or "").lower():
-                    continue
-                total_avail = int(current_stock.get(t_i, 0)) + int(supplemental_supply.get(t_i, 0))
-                cap_i = total_avail // int(_need) if int(_need) > 0 else 0
-                if cap_i > display_target_runs:
-                    display_target_runs = cap_i
+            display_target_runs = max(int(runs), 0)
 
             for tid, need_per_run in per_run_reqs.items():
                 have_now = int(current_stock.get(int(tid), 0))
