@@ -1,9 +1,37 @@
-"""App Settings"""
+"""Application settings for aareactions."""
 
 # Django
 from django.conf import settings
+
 
 AAREACTIONS_PRICE_METHOD = getattr(settings, "AAREACTIONS_PRICE_METHOD", "Fuzzwork")
 AAREACTIONS_PRICE_SOURCE_ID = int(getattr(settings, "AAREACTIONS_PRICE_SOURCE_ID", 60003760))
 AAREACTIONS_PRICE_JANICE_API_KEY = getattr(settings, "AAREACTIONS_PRICE_JANICE_API_KEY", "")
 AAREACTIONS_PRICE_INSTANT = bool(getattr(settings, "AAREACTIONS_PRICE_INSTANT", True))
+AAREACTIONS_PRICE_REQUEST_TIMEOUT = int(getattr(settings, "AAREACTIONS_PRICE_REQUEST_TIMEOUT", 20))
+AAREACTIONS_PRICE_BATCH_SIZE = int(getattr(settings, "AAREACTIONS_PRICE_BATCH_SIZE", 1000))
+
+AAREACTIONS_ESI_COMPATIBILITY_DATE = getattr(
+    settings,
+    "AAREACTIONS_ESI_COMPATIBILITY_DATE",
+    "2025-09-30",
+)
+AAREACTIONS_CHARACTER_STANDINGS_SCOPES = list(
+    getattr(
+        settings,
+        "AAREACTIONS_CHARACTER_STANDINGS_SCOPES",
+        ["esi-characters.read_standings.v1"],
+    )
+)
+AAREACTIONS_CHARACTER_SKILLS_SCOPES = list(
+    getattr(
+        settings,
+        "AAREACTIONS_CHARACTER_SKILLS_SCOPES",
+        ["esi-skills.read_skills.v1"],
+    )
+)
+AAREACTIONS_CHARACTER_TOKEN_SCOPES = list(
+    dict.fromkeys(AAREACTIONS_CHARACTER_STANDINGS_SCOPES + AAREACTIONS_CHARACTER_SKILLS_SCOPES)
+)
+
+AAREACTIONS_SOLAR_SYSTEM_SEARCH_LIMIT = int(getattr(settings, "AAREACTIONS_SOLAR_SYSTEM_SEARCH_LIMIT", 20))

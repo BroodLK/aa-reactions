@@ -3,65 +3,64 @@ from typing import Dict, List
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, get_object_or_404, redirect
 from django.db import IntegrityError, transaction
+from django.http import JsonResponse
+from django.shortcuts import redirect, render
 from django.utils.decorators import method_decorator
 from django.utils import timezone
 from django.utils.translation import gettext
 from django.views import View
-from django.http import JsonResponse
 
 from allianceauth.eveonline.models import EveCharacter
 
-from esi.models import Token
 from esi.decorators import token_required
+from esi.models import Token
 
+from . import app_settings
 from .forms import InputForm
-from .models import ReactionSettings, SystemIndices, CharacterToken, Reaction
-from .tasks import update_character_skills
-from .tasks import update_character_standings
-
 from .helper import (
-    filter_by_settings,
-    parse_input_lines,
-    resolve_types,
-    categorize_items,
-    build_initial_stock,
-    plan_reactions_with_chain,
-    sales_tax_pct,
-    me_bonus_pct,
-    te_bonus_pct,
-    effective_time_seconds,
+    add_supply,
     apply_me_to_requirements,
+    build_initial_stock,
+    build_reprocess_step,
+    categorize_items,
+    consumes_any_of,
+    dec_from,
+    effective_time_seconds,
+    filter_by_settings,
+    find_feeders_for_parent,
     fmt_duration,
-    is_fuel_id,
-    refined_partner_type_id,
     has_refined_already,
-    runcap_with_present,
-    runcap_with_supply,
+    is_fuel_id,
+    me_bonus_pct,
+    resolve_types,
+    parse_input_lines,
+    plan_reactions_with_chain,
     price_input,
     price_output,
-    add_supply,
-    find_feeders_for_parent,
-    reprocess_unrefined_in_stock,
-    build_reprocess_step,
-    consumes_any_of,
     produces_unrefined,
+    reprocess_unrefined_in_stock,
+    refined_partner_type_id,
+    runcap_with_present,
+    runcap_with_supply,
+    sales_tax_pct,
     self_recovery_loss,
-    dec_from,
+    te_bonus_pct,
 )
+from .models import CharacterToken, Reaction, ReactionSettings, SystemIndices
 from .pricing import resolve_price_value
 from .providers import get_industry_systems
+from .tasks import update_character_skills, update_character_standings
 
 from eve_sde.models import ItemType as EveType, SolarSystem as EveSolarSystem
 
 @login_required
-@token_required(scopes=['esi-characters.read_standings.v1', 'esi-skills.read_skills.v1'])
+@token_required(scopes=app_settings.AAREACTIONS_CHARACTER_TOKEN_SCOPES)
 def add_character_token(request, token: Token):
 
     if CharacterToken.objects.filter(character_id=token.character_id).exists():
         messages.error(request, gettext('Character reaction skills already being tracked.'))
-        return redirect('aa_contacts:index')
+        return redirect('aareactions:index')
 
     eve_char, _ = EveCharacter.objects.get_or_create(
         character_id=token.character_id,
@@ -83,8 +82,8 @@ def add_character_token(request, token: Token):
         return redirect('aareactions:index')
 
 
-    update_character_skills.delay(character_id=token.character_id)
-    update_character_standings.delay(character_id=token.character_id)
+    update_character_skills.apply_async(kwargs={"character_id": token.character_id})
+    update_character_standings.apply_async(kwargs={"character_id": token.character_id})
 
     messages.success(request, gettext('Reaction skills and standings are now being tracked.'))
     return redirect('aareactions:index')
@@ -97,7 +96,7 @@ def solar_system_search(request):
     qs = (
         EveSolarSystem.objects.filter(name__icontains=q)
         .only("id", "name")
-        .order_by("name")[:20]
+        .order_by("name")[: app_settings.AAREACTIONS_SOLAR_SYSTEM_SEARCH_LIMIT]
     )
     data = [{"id": s.id, "text": s.name} for s in qs]
     return JsonResponse(data, safe=False)

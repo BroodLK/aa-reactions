@@ -1,166 +1,219 @@
-# pricing.py
-import logging
+# Standard Library
 from decimal import Decimal
-from typing import Optional
+from functools import lru_cache
+
+# Third Party
+from allianceauth.services.hooks import get_extension_logger
 import requests
-from django.db.utils import Error
+
+# Django
 from django.utils import timezone
-from .app_settings import (
-    AAREACTIONS_PRICE_INSTANT,
-    AAREACTIONS_PRICE_JANICE_API_KEY,
-    AAREACTIONS_PRICE_METHOD,
-    AAREACTIONS_PRICE_SOURCE_ID,
+
+# aareactions
+from aareactions import app_settings
+from aareactions.models import EveTypePrice
+
+
+logger = get_extension_logger(__name__)
+
+ZERO_PRICE_TUPLE = (
+    Decimal("0"),
+    Decimal("0"),
+    Decimal("0"),
+    Decimal("0"),
 )
-from .models import EveTypePrice
-
-logger = logging.getLogger(__name__)
 
 
-def valid_janice_api_key() -> bool:
-    api_key = AAREACTIONS_PRICE_JANICE_API_KEY or ""
+def _clean_item_ids(item_ids):
+    cleaned_ids = []
+    seen_ids = set()
+
+    for item_id in item_ids or []:
+        try:
+            numeric_id = int(item_id)
+        except (TypeError, ValueError):
+            continue
+
+        if numeric_id <= 0 or numeric_id in seen_ids:
+            continue
+
+        seen_ids.add(numeric_id)
+        cleaned_ids.append(numeric_id)
+
+    return cleaned_ids
+
+
+def _decimal_or_zero(value):
+    try:
+        return Decimal(str(value))
+    except Exception:
+        return Decimal("0")
+
+
+def is_zero_price_tuple(prices):
+    return tuple(prices or ZERO_PRICE_TUPLE) == ZERO_PRICE_TUPLE
+
+
+def _janice_headers():
+    return {
+        "Content-Type": "text/plain",
+        "X-ApiKey": app_settings.AAREACTIONS_PRICE_JANICE_API_KEY,
+        "accept": "application/json",
+    }
+
+
+@lru_cache(maxsize=1)
+def valid_janice_api_key():
+    api_key = app_settings.AAREACTIONS_PRICE_JANICE_API_KEY or ""
     if not api_key:
-        logger.debug("valid_janice_api_key: empty API key")
         return False
+
     try:
-        logger.debug("valid_janice_api_key: calling Janice markets endpoint")
-        r = requests.get(
+        response = requests.get(
             "https://janice.e-351.com/api/rest/v2/markets",
-            headers={"Content-Type": "text/plain", "X-ApiKey": api_key, "accept": "application/json"},
-            timeout=20,
+            headers=_janice_headers(),
+            timeout=app_settings.AAREACTIONS_PRICE_REQUEST_TIMEOUT,
         )
-        logger.debug("valid_janice_api_key: status_code=%s", r.status_code)
-        r.raise_for_status()
-        data = r.json()
-        ok = not (isinstance(data, dict) and "status" in data)
-        logger.debug("valid_janice_api_key: json_ok=%s", ok)
-        return ok
-    except Exception as e:
-        logger.warning("valid_janice_api_key: request failed: %s", e)
+        response.raise_for_status()
+        payload = response.json()
+        return not (isinstance(payload, dict) and "status" in payload)
+    except requests.RequestException as exc:
+        logger.warning("Janice API key validation failed: %s", exc)
+        return False
+    except ValueError as exc:
+        logger.warning("Janice API key validation returned invalid JSON: %s", exc)
         return False
 
 
-def _fetch_prices(item_id: int) -> tuple[Decimal, Decimal, Decimal, Decimal]:
-    logger.debug("fetch_prices: start item_id=%s method=%s station=%s", item_id, AAREACTIONS_PRICE_METHOD, AAREACTIONS_PRICE_SOURCE_ID)
-    if not isinstance(item_id, int) or item_id <= 0:
-        logger.debug("fetch_prices: invalid item_id=%s", item_id)
-        return (Decimal("0"), Decimal("0"), Decimal("0"), Decimal("0"))
+def _use_janice():
+    return app_settings.AAREACTIONS_PRICE_METHOD == "Janice" and valid_janice_api_key()
 
-    buy = sell = buy_average = sell_average = Decimal("0")
+
+def _fetch_janice_price(item_id):
     try:
-        use_janice = AAREACTIONS_PRICE_METHOD == "Janice" and valid_janice_api_key()
-        logger.debug("fetch_prices: use_janice=%s", use_janice)
+        response = requests.get(
+            "https://janice.e-351.com/api/rest/v2/pricer/{0}".format(int(item_id)),
+            headers=_janice_headers(),
+            timeout=app_settings.AAREACTIONS_PRICE_REQUEST_TIMEOUT,
+        )
+        response.raise_for_status()
+        node = response.json()
 
-        if use_janice:
-            url = f"https://janice.e-351.com/api/rest/v2/pricer/{item_id}"
-            headers = {"Content-Type": "text/plain", "X-ApiKey": AAREACTIONS_PRICE_JANICE_API_KEY, "accept": "application/json"}
-            logger.debug("fetch_prices: GET %s headers=%s", url, {"X-ApiKey": "***"})
-            resp = requests.get(url, headers=headers, timeout=20)
-            logger.debug("fetch_prices: janice status=%s", resp.status_code)
-            resp.raise_for_status()
-            node = resp.json()
-            logger.debug("fetch_prices: janice payload keys=%s", list(node.keys()))
-            buy = Decimal(str(node["immediatePrices"]["buyPrice5DayMedian"]))
-            sell = Decimal(str(node["immediatePrices"]["sellPrice5DayMedian"]))
-            buy_average = Decimal(str(node["top5AveragePrices"]["buyPrice5DayMedian"]))
-            sell_average = Decimal(str(node["top5AveragePrices"]["sellPrice5DayMedian"]))
-        else:
-            url = "https://market.fuzzwork.co.uk/aggregates/"
-            params = {"types": item_id, "station": AAREACTIONS_PRICE_SOURCE_ID}
-            logger.debug("fetch_prices: GET %s params=%s", url, params)
-            resp = requests.get(url, params=params, timeout=20)
-            logger.debug("fetch_prices: fuzzwork status=%s", resp.status_code)
-            resp.raise_for_status()
-            data = resp.json()
-            logger.debug("fetch_prices: fuzzwork keys=%s", list(data.keys())[:5])
-            node = data.get(str(item_id), {})
-            if not node:
-                logger.warning("fetch_prices: fuzzwork missing node for %s", item_id)
-            else:
-                logger.debug("fetch_prices: fuzzwork node keys=%s", list(node.keys()))
-                buy = Decimal(str(node["buy"]["max"]))
-                sell = Decimal(str(node["sell"]["min"]))
-                buy_average = Decimal(str(node["buy"]["percentile"]))
-                sell_average = Decimal(str(node["sell"]["percentile"]))
-    except requests.HTTPError as e:
-        logger.error("fetch_prices: HTTP error for %s: %s body=%s", item_id, e, getattr(e.response, "text", ""))
-    except KeyError as e:
-        logger.error("fetch_prices: payload missing key %s for %s", e, item_id)
-    except Exception as e:
-        logger.error("fetch_prices: generic failure for %s: %s", item_id, e)
+        return (
+            _decimal_or_zero(node["immediatePrices"]["buyPrice5DayMedian"]),
+            _decimal_or_zero(node["immediatePrices"]["sellPrice5DayMedian"]),
+            _decimal_or_zero(node["top5AveragePrices"]["buyPrice5DayMedian"]),
+            _decimal_or_zero(node["top5AveragePrices"]["sellPrice5DayMedian"]),
+        )
+    except requests.RequestException as exc:
+        logger.error("Janice price fetch failed for %s: %s", item_id, exc)
+    except (KeyError, TypeError, ValueError) as exc:
+        logger.error("Janice payload parse failed for %s: %s", item_id, exc)
 
-    logger.debug(
-        "fetch_prices: result item_id=%s buy=%s sell=%s buy_avg=%s sell_avg=%s",
-        item_id,
-        buy,
-        sell,
-        buy_average,
-        sell_average,
-    )
-    return buy, sell, buy_average, sell_average
+    return ZERO_PRICE_TUPLE
 
 
-def refresh_prices(item_id: int) -> EveTypePrice:
-    logger.debug("refresh_prices: item_id=%s", item_id)
+def _fetch_fuzzwork_prices(item_ids):
+    price_map = {int(item_id): ZERO_PRICE_TUPLE for item_id in item_ids}
+    if not item_ids:
+        return price_map
+
+    try:
+        response = requests.get(
+            "https://market.fuzzwork.co.uk/aggregates/",
+            params={
+                "types": ",".join(str(item_id) for item_id in item_ids),
+                "station": app_settings.AAREACTIONS_PRICE_SOURCE_ID,
+            },
+            timeout=app_settings.AAREACTIONS_PRICE_REQUEST_TIMEOUT,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except requests.RequestException as exc:
+        logger.error("Fuzzwork price fetch failed for %s items: %s", len(item_ids), exc)
+        return price_map
+    except ValueError as exc:
+        logger.error("Fuzzwork returned invalid JSON for %s items: %s", len(item_ids), exc)
+        return price_map
+
+    for item_id in item_ids:
+        node = payload.get(str(item_id), {})
+        if not node:
+            continue
+
+        try:
+            price_map[int(item_id)] = (
+                _decimal_or_zero(node["buy"]["max"]),
+                _decimal_or_zero(node["sell"]["min"]),
+                _decimal_or_zero(node["buy"]["percentile"]),
+                _decimal_or_zero(node["sell"]["percentile"]),
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            logger.error("Fuzzwork payload parse failed for %s: %s", item_id, exc)
+
+    return price_map
+
+
+def fetch_price_map(item_ids):
+    cleaned_ids = _clean_item_ids(item_ids)
+    if not cleaned_ids:
+        return {}
+
+    if _use_janice():
+        return {int(item_id): _fetch_janice_price(int(item_id)) for item_id in cleaned_ids}
+
+    return _fetch_fuzzwork_prices(cleaned_ids)
+
+
+def _fetch_prices(item_id):
+    item_prices = fetch_price_map([item_id])
+    return item_prices.get(int(item_id), ZERO_PRICE_TUPLE)
+
+
+def refresh_prices(item_id):
     buy, sell, buy_average, sell_average = _fetch_prices(item_id)
-    obj, created = EveTypePrice.objects.get_or_create(eve_type_id=item_id)
-    logger.debug("refresh_prices: row %s (created=%s)", obj.eve_type_id, created)
+    obj, _ = EveTypePrice.objects.get_or_create(eve_type_id=item_id)
     obj.buy = buy
     obj.sell = sell
     obj.buy_average = buy_average
     obj.sell_average = sell_average
     obj.updated = timezone.now()
     obj.save(update_fields=["buy", "sell", "buy_average", "sell_average", "updated"])
-    logger.debug("refresh_prices: saved item_id=%s", item_id)
     return obj
 
 
-def get_or_create_prices(item_id: int) -> EveTypePrice:
-    logger.debug("get_or_create_prices: item_id=%s", item_id)
+def get_or_create_prices(item_id):
     if not isinstance(item_id, int) or item_id <= 0:
         obj, _ = EveTypePrice.objects.get_or_create(
             eve_type_id=item_id,
             defaults={"buy": 0, "sell": 0, "buy_average": 0, "sell_average": 0, "updated": timezone.now()},
         )
-        logger.debug("get_or_create_prices: returned zero row for invalid id=%s", item_id)
         return obj
+
     try:
-        obj = EveTypePrice.objects.get(eve_type_id=item_id)
-        logger.debug("get_or_create_prices: cache hit for %s", item_id)
-        return obj
+        return EveTypePrice.objects.get(eve_type_id=item_id)
     except EveTypePrice.DoesNotExist:
-        logger.debug("get_or_create_prices: cache miss for %s, fetching ...", item_id)
         buy, sell, buy_average, sell_average = _fetch_prices(item_id)
-        updated = timezone.now()
-        obj = EveTypePrice.objects.create(
+        return EveTypePrice.objects.create(
             eve_type_id=item_id,
             buy=buy,
             sell=sell,
             buy_average=buy_average,
             sell_average=sell_average,
-            updated=updated,
+            updated=timezone.now(),
         )
-        logger.debug("get_or_create_prices: created row for %s", item_id)
-        return obj
 
 
-def get_npc_price(item_id: int) -> Optional[EveTypePrice]:
-    logger.debug("get_npc_price: item_id=%s", item_id)
+def get_npc_price(item_id):
     try:
         return EveTypePrice.objects.get(eve_type_id=item_id)
     except EveTypePrice.DoesNotExist:
-        logger.error("get_npc_price: missing for %s", item_id)
-        return None
-    except Exception as e:
-        logger.error("get_npc_price: error for %s: %s", item_id, e)
+        logger.error("Price row missing for item %s.", item_id)
         return None
 
 
-def resolve_price_value(item_id: int, basis: str) -> Decimal:
-    logger.debug("resolve_price_value: item_id=%s basis=%s", item_id, basis)
+def resolve_price_value(item_id, basis):
     row = get_or_create_prices(item_id)
     if basis == "buy":
-        val = row.buy if AAREACTIONS_PRICE_INSTANT else row.buy_average
-    else:
-        val = row.sell if AAREACTIONS_PRICE_INSTANT else row.sell_average
-    logger.debug("resolve_price_value: item_id=%s -> %s", item_id, val)
-    return val
+        return row.buy if app_settings.AAREACTIONS_PRICE_INSTANT else row.buy_average
+    return row.sell if app_settings.AAREACTIONS_PRICE_INSTANT else row.sell_average

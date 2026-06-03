@@ -55,6 +55,7 @@ class CharacterToken(ReactionToken):
     def visible_for(cls, user):
         if user.is_superuser:
             return cls.objects.all()
+        return cls.objects.none()
 
 class CharacterReactions(models.Model):
     character = models.ForeignKey(CharacterToken, on_delete=models.CASCADE, related_name='+')
@@ -73,7 +74,7 @@ class CharacterReactions(models.Model):
 
 class CharacterStandings(models.Model):
     character = models.ForeignKey(CharacterToken, on_delete=models.CASCADE, related_name='+')
-    standing = models.PositiveIntegerField(default=0)
+    standing = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
     entity_id = models.BigIntegerField(default=0)
     entity_type = models.CharField(max_length=100, default="")
     last_update = models.DateTimeField(default=timezone.now)
