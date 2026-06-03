@@ -6,7 +6,7 @@ from math import ceil
 from typing import Dict, Iterable, List, Tuple, Any
 import re
 from django.db.models import Sum
-from eveuniverse.models import EveType, EveTypeMaterial
+from eve_sde.models import ItemType as EveType, ItemTypeMaterials as EveTypeMaterial
 from .models import Reaction, ReactionSettings
 from .pricing import resolve_price_value
 
@@ -182,10 +182,10 @@ def resolve_types(pairs: Iterable[Tuple[str, int]]) -> List[ParsedLine]:
 
     # First try exact match
     qs_name = EveType.objects.filter(name__in=list(by_name.keys())).only(
-        "id", "name", "eve_group_id", "portion_size", "volume"
+        "id", "name", "group_id", "portion_size", "volume"
     )
     qs_id = EveType.objects.filter(id__in=list(by_id.keys())).only(
-        "id", "name", "eve_group_id", "portion_size", "volume"
+        "id", "name", "group_id", "portion_size", "volume"
     )
     out = []
     matched_names = set()
@@ -204,7 +204,7 @@ def resolve_types(pairs: Iterable[Tuple[str, int]]) -> List[ParsedLine]:
             q_objects |= Q(name__iexact=name)
         if q_objects:
             qs_iname = EveType.objects.filter(q_objects).only(
-                "id", "name", "eve_group_id", "portion_size", "volume"
+                "id", "name", "group_id", "portion_size", "volume"
             )
             for et in qs_iname:
                 input_name_lower = et.name.lower()
@@ -219,7 +219,7 @@ def resolve_types(pairs: Iterable[Tuple[str, int]]) -> List[ParsedLine]:
 def categorize_items(items: List[ParsedLine]) -> List[ParsedItem]:
     ids = [p.evetype.id for p in items]
     has_materials = set(
-        EveTypeMaterial.objects.filter(eve_type_id__in=ids).values_list("eve_type_id", flat=True).distinct()
+        EveTypeMaterial.objects.filter(item_type_id__in=ids).values_list("item_type_id", flat=True).distinct()
     )
     reaction_mat_ids = set(Reaction.objects.values_list("materials__type_id", flat=True).distinct())
     out: List[ParsedItem] = []
@@ -232,7 +232,7 @@ def categorize_items(items: List[ParsedLine]) -> List[ParsedItem]:
         elif p.evetype.id in has_materials:
             out.append(ParsedItem(p.evetype, p.quantity, "refine"))
         else:
-            continue
+            out.append(ParsedItem(p.evetype, p.quantity, "material"))
     return out
 
 def filter_by_settings(items: List[ParsedItem], settings: ReactionSettings) -> List[ParsedItem]:
@@ -251,14 +251,14 @@ def refine_from_inputs(
     if refinables:
         type_ids = [p.evetype.id for p in refinables]
         mats = (
-            EveTypeMaterial.objects.filter(eve_type_id__in=type_ids)
-            .values("eve_type_id", "material_eve_type_id")
+            EveTypeMaterial.objects.filter(item_type_id__in=type_ids)
+            .values("item_type_id", "material_item_type_id")
             .annotate(total=Sum("quantity"))
         )
         mats_by_source: Dict[int, List[Tuple[int, int]]] = {}
         for m in mats:
-            mats_by_source.setdefault(int(m["eve_type_id"]), []).append(
-                (int(m["material_eve_type_id"]), int(m["total"]))
+            mats_by_source.setdefault(int(m["item_type_id"]), []).append(
+                (int(m["material_item_type_id"]), int(m["total"]))
             )
         for p in refinables:
             rate = refine_rate
@@ -482,15 +482,15 @@ def reprocess_unrefined_in_stock(
         return {}, {}
     mats = (
         EveTypeMaterial.objects
-        .filter(eve_type_id__in=unref_ids)
-        .values("eve_type_id", "material_eve_type_id")
+        .filter(item_type_id__in=unref_ids)
+        .values("item_type_id", "material_item_type_id")
         .annotate(total=Sum("quantity"))
     )
     mats_by_unref: Dict[int, List[Tuple[int, int]]] = {}
     material_ids: set[int] = set()
     for m in mats:
-        e = int(m["eve_type_id"])
-        mt = int(m["material_eve_type_id"])
+        e = int(m["item_type_id"])
+        mt = int(m["material_item_type_id"])
         q = int(m["total"])
         mats_by_unref.setdefault(e, []).append((mt, q))
         material_ids.add(mt)
@@ -640,13 +640,13 @@ def self_recovery_loss(plan: dict, refine_rate: Decimal, type_map: Dict[int, Eve
         return 0
     mats = (
         EveTypeMaterial.objects
-        .filter(eve_type_id__in=unref_tids)
-        .values("eve_type_id", "material_eve_type_id")
+        .filter(item_type_id__in=unref_tids)
+        .values("item_type_id", "material_item_type_id")
         .annotate(total=Sum("quantity"))
     )
     mats_by_unref: Dict[int, List[Tuple[int, int]]] = {}
     for m in mats:
-        mats_by_unref.setdefault(int(m["eve_type_id"]), []).append((int(m["material_eve_type_id"]), int(m["total"])))
+        mats_by_unref.setdefault(int(m["item_type_id"]), []).append((int(m["material_item_type_id"]), int(m["total"])))
     recovered: Dict[int, int] = {}
     for utid in unref_tids:
         et = type_map.get(int(utid))

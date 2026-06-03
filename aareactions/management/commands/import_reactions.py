@@ -1,6 +1,6 @@
 import json
 from django.core.management.base import BaseCommand, CommandError
-from eveuniverse.models import EveType
+from eve_sde.models import ItemType as EveType
 from django.db import transaction
 from pathlib import Path
 from typing import List

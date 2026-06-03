@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('eveuniverse', '0011_extend_industry_activites'),
+        ('eve_sde', '0018_blueprintactivity_blueprintactivityproduct_and_more'),
     ]
 
     operations = [
@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
                 ('buy_average', models.DecimalField(decimal_places=2, default=Decimal('0'), max_digits=20)),
                 ('sell_average', models.DecimalField(decimal_places=2, default=Decimal('0'), max_digits=20)),
                 ('updated', models.DateTimeField(auto_now=True)),
-                ('eve_type', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='aareactions_price', to='eveuniverse.evetype')),
+                ('eve_type', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='aareactions_price', to='eve_sde.itemtype')),
             ],
         ),
         migrations.CreateModel(
@@ -63,7 +63,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('quantity', models.PositiveIntegerField(validators=[django.core.validators.MinValueValidator(1)])),
                 ('reaction', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='products', to='aareactions.reaction')),
-                ('type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='eveuniverse.evetype')),
+                ('type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='eve_sde.itemtype')),
             ],
             options={
                 'unique_together': {('reaction', 'type')},
@@ -75,7 +75,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('quantity', models.PositiveIntegerField(validators=[django.core.validators.MinValueValidator(1)])),
                 ('reaction', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='materials', to='aareactions.reaction')),
-                ('type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='eveuniverse.evetype')),
+                ('type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='eve_sde.itemtype')),
             ],
             options={
                 'unique_together': {('reaction', 'type')},

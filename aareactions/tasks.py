@@ -8,7 +8,7 @@ from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
 
-from eveuniverse.models import EveType
+from eve_sde.models import ItemType as EveType
 
 from .models import EveTypePrice, CharacterToken, CharacterReactions, CharacterStandings
 from .providers import get_character_skills, get_character_standings

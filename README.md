@@ -1,203 +1,79 @@
-# Example Plugin App for Alliance Auth (GitHub Version)<a name="example-plugin-app-for-alliance-auth-github-version"></a>
+![license](https://img.shields.io/badge/license-GPLv3-green?style=for-the-badge)
+![python versions](https://img.shields.io/badge/python-3.10%2B-blue?style=for-the-badge)
+![django versions](https://img.shields.io/badge/django-4.2%2B-blue?style=for-the-badge)
 
-This is an example plugin app for [Alliance Auth](https://gitlab.com/allianceauth/allianceauth)
-(AA) that can be used as a starting point to develop custom plugins.
+# AA Reactions
 
-![License](https://img.shields.io/badge/license-GPLv3-green)
-![python](https://img.shields.io/badge/python-3.8-informational)
-![django](https://img.shields.io/badge/django-3.2-informational)
-![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)
+AA Reactions is a plugin for Alliance Auth that provides tools for planning and calculating EVE Online reactions. It helps industrialist pilots optimize their production chains by calculating requirements, profits, and logistics based on their available materials.
 
-_(These badges are examples, you can and should replace them with your own)_
+## Index
 
-For the GitLab version of this example app, please have a look over here, Erik
-Kalkoken was so friendly to provide it » [Alliance Auth Example App (GitLab Version)](https://gitlab.com/ErikKalkoken/allianceauth-example-plugin)
+- [AA Reactions](#aa-reactions)
+  - [Core Requirements](#core-requirements)
+  - [Install Instructions](#install-instructions)
+- [Features](#features)
+  - [Reaction Planner](#reaction-planner)
+  - [Refining & Reprocessing](#refining--reprocessing)
+  - [Economic Analysis](#economic-analysis)
+- [Permissions](#permissions)
 
-______________________________________________________________________
+## Core Requirements
+### The following AllianceAuth plugins are **_required_**:
 
-<!-- mdformat-toc start --slug=github --maxlevel=6 --minlevel=1 -->
-
-- [Example Plugin App for Alliance Auth (GitHub Version)](#example-plugin-app-for-alliance-auth-github-version)
-  - [Features](#features)
-  - [How to Use It](#how-to-use-it)
-    - [Cloning From Repo](#cloning-from-repo)
-    - [Renaming the App](#renaming-the-app)
-  - [Clearing Migrations](#clearing-migrations)
-  - [Writing Unit Tests](#writing-unit-tests)
-  - [Installing Into Your Dev AA](#installing-into-your-dev-aa)
-  - [Installing Into Production AA](#installing-into-production-aa)
-  - [Contribute](#contribute)
-
-<!-- mdformat-toc end -->
-
-______________________________________________________________________
-
-## Features<a name="features"></a>
-
-- The plugin can be installed, upgraded (and removed) into an existing AA
-  installation using PyInstaller.
-- It has its own menu item in the sidebar.
-- It has one view that shows a panel and some text
-
-## How to Use It<a name="how-to-use-it"></a>
-
-To use this example as a basis for your own development, just fork this repo and then
-clone it on your dev machine.
-
-You then should rename the app, and then you can install it into your AA dev
-installation.
-
-### Cloning From Repo<a name="cloning-from-repo"></a>
-
-For this app, we're assuming that you have all your AA projects, your virtual
-environment, and your AA installation under one top folder (e.g. aa-dev).
-
-This should look something like this:
-
-```text
-aa-dev
-|- venv/
-|- myauth/
-|- aa-example-plugin
-|- (other AA projects ...)
+```md
+allianceauth >= 4.3.1
+django-eveonline-sde
+django-esi
 ```
 
-Then just cd into the top folder (e.g. aa-dev) and clone the repo from your fork.
-You can give the repo a new name right away (e.g. `aa-your-app-name`). You also want
-to create a new git repo for it.
-Finally, enable [pre-commit](https://pre-commit.com) to enable automatic code style
-checking.
-
+## Install Instructions
+After making sure to add the above prerequisite applications.
 ```bash
-git clone https://github.com/YourName/aa-example-plugin.git aa-your-app-name
-cd aa-your-app-name
-rm -rf .git
-git init
-pre-commit install
+source /home/allianceserver/venv/auth/bin/activate && cd /home/allianceserver/myauth/
 ```
-
-### Renaming the App<a name="renaming-the-app"></a>
-
-Before installing this app into your dev AA you need to rename it to something
-suitable for your development project. Otherwise, you risk not being able to install
-additional apps that might also be called example.
-
-Here is an overview of the places that you need to edit to adopt the name.
-
-Easiest is to just find & replace `example` with your new app name in all files
-listed below.
-
-One small warning about picking names: Python is a bit particular about what special
-characters are allowed for names of modules and packages. To avoid any pitfalls, I
-would therefore recommend using only normal characters (a-z) in your app's name
-unless you know exactly what you're doing.
-
-| Location                                 | Description                                                                            |
-| ---------------------------------------- | -------------------------------------------------------------------------------------- |
-| `./example/`                             | Folder name                                                                            |
-| `./example/static/example/`              | Folder name                                                                            |
-| `./example/templates/example/`           | Folder name                                                                            |
-| `./pyproject.cfg`                        | Update module name for version import, update package name, update title, author, etc. |
-| `./example/apps.py`                      | App name                                                                               |
-| `./example/__init__.py`                  | App name                                                                               |
-| `./example/auth_hooks.py`                | Menu hook config incl. icon and label of your app's menu item appearing in the sidebar |
-| `./example/models.py`                    | App name                                                                               |
-| `./example/urls.py`                      | App name                                                                               |
-| `./example/views.py`                     | Permission name and template path                                                      |
-| `./example/templates/example/base.html`  | Title of your app to be shown in all views and as title in the browser tab             |
-| `./example/templates/example/index.html` | Template path                                                                          |
-| `./testauth/local.py`                    | App name in `PACKAGE` constant                                                         |
-| `./.coveragerc`                          | App name                                                                               |
-| `./MANIFEST.in`                          | App name                                                                               |
-| `./README.md`                            | Clear content                                                                          |
-| `./LICENSE`                              | Replace with your own license                                                          |
-| `./tox.ini`                              | App name                                                                               |
-| `./.isort.cfg`                           | App name for `import_heading_firstparty`                                               |
-| `./Makefile`                             | App name and package name                                                              |
-
-## Clearing Migrations<a name="clearing-migrations"></a>
-
-Instead of renaming your app in the migrations, it's easier to just recreate them
-later in the process. For this to work, you need to delete the old migration files in
-your `migrations` folder.
-
 ```bash
-rm your-app-name/migrations/0001_initial.py
-rm -rf your-app-name/migrations/_pycache
+pip install git+https://github.com/BroodLK/aa-reactions.git#egg=aa-reactions
 ```
-
-## Writing Unit Tests<a name="writing-unit-tests"></a>
-
-Write your unit tests in `your-app-name/tests/` and make sure that you use a "test\_"
-prefix for files with your unit tests.
-
-## Installing Into Your Dev AA<a name="installing-into-your-dev-aa"></a>
-
-Once you've cloned or copied all files into place and finished renaming the app,
-you're ready to install it to your dev AA instance.
-
-Make sure you're in your venv. Then install it with pip in editable mode:
-
 ```bash
-pip install -e aa-your-app-name
+vi myauth/settings/local.py
 ```
-
-First add your app to the Django project by adding the name of your app to
-INSTALLED_APPS in `settings/local.py`.
-
-Next, we will create new migrations for your app:
-
+Add `eve_sde` and `aareactions` to your `INSTALLED_APPS`.
 ```bash
-python manage.py makemigrations
+python manage.py migrate && python manage.py collectstatic --noinput
 ```
-
-Then run a check to see if everything is set up correctly.
-
+### Initial Data Import
+You **MUST** import the reaction definitions for the plugin to function:
 ```bash
-python manage.py check
+python manage.py import_reactions
 ```
-
-In case they're errors make sure to fix them before proceeding.
-
-Next, perform migrations to add your model to the database:
-
+restart the things
+exit your venv
 ```bash
-python manage.py migrate
+sudo supervisorctl restart myauth:
 ```
 
-Finally, restart your AA server and that's it.
+## Features
 
-## Installing Into Production AA<a name="installing-into-production-aa"></a>
+### Reaction Planner
+The core of the application is a powerful reaction planner that allows you to:
+- **Input Parsing**: Paste items directly from your EVE inventory, assets, or cargo holds.
+- **Chain Calculation**: Automatically determine the full multi-step reaction chain required to produce your desired end products.
+- **Missing Materials**: Identifies exactly what materials you are missing and calculates the cost to acquire them.
+- **Time Estimates**: Provides a total time required for the entire production chain.
 
-To install your plugin into a production AA, run this command within the virtual
-Python environment of your AA installation:
+### Refining & Reprocessing
+- **Automatic Refinement**: Automatically calculates refined outputs from unrefined materials (like Moon Ores) based on your configured refine rates.
+- **Skill Integration**: Supports character-specific skill levels for scrap metal processing and reprocessing to provide accurate output estimates.
 
-```bash
-pip install git+https://github.com/YourName/aa-your-app-name
-```
+### Economic Analysis
+- **Profit & Loss**: Detailed breakdown of profit and loss for each reaction step and the final product.
+- **Cost Index Integration**: Dynamic fetching of system-specific industry (Reactions) cost indices from ESI.
+- **Configurable Fees**: Support for broker fees, sales taxes, SCC taxes, and facility taxes.
+- **Price Basis**: Choose between Buy or Sell price basis for both inputs and outputs.
 
-Alternatively, you can create a package file and manually upload it to your
-production AA:
+## Permissions
 
-```bash
-pip install build
-python -m build
-```
-
-You'll find the package under `./dist/aa-your-app-name.tar.gz` after this.
-
-Install your package directly from the package file:
-
-```bash
-pip install aa-your-app-name.tar.gz
-```
-
-Then add your app to `INSTALLED_APPS` in `settings/local.py`, run migrations and
-restart your allianceserver.
-
-## Contribute<a name="contribute"></a>
-
-If you've made a new app for AA, please consider sharing it with the rest of the
-community. For any questions on how to share your app, please contact the AA devs on
-their Discord. You find the current community creations
-[here](https://gitlab.com/allianceauth/community-creations).
+| Permission | Description |
+|---|---|
+| **basic_access** | Can access the Reactions tool and perform calculations. |
+| **reactions_admin** | Can manage app-wide default reaction settings. |

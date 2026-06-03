@@ -17,7 +17,7 @@ from esi.models import Token
 from esi.decorators import token_required
 
 from .forms import InputForm
-from .models import ReactionSettings, SystemIndices, CharacterToken
+from .models import ReactionSettings, SystemIndices, CharacterToken, Reaction
 from .tasks import update_character_skills
 from .tasks import update_character_standings
 
@@ -53,8 +53,7 @@ from .helper import (
 from .pricing import resolve_price_value
 from .providers import get_industry_systems
 
-from eveuniverse.models import EveSolarSystem
-from eveuniverse.models import EveType
+from eve_sde.models import ItemType as EveType, SolarSystem as EveSolarSystem
 
 @login_required
 @token_required(scopes=['esi-characters.read_standings.v1', 'esi-skills.read_skills.v1'])
@@ -138,6 +137,12 @@ class InputView(View):
         if not form.is_valid():
             return render(request, self.template_name, {"form": form, "settings": settings})
 
+        if Reaction.objects.count() == 0:
+            messages.warning(
+                request,
+                "No reactions found in database. Did you run the 'import_reactions' management command?"
+            )
+
         refine_rate_pct = Decimal(form.cleaned_data.get("refine_rate") or settings.refine_rate)
         if refine_rate_pct <= 1:
             refine_rate_pct = refine_rate_pct * Decimal("100")
@@ -173,7 +178,7 @@ class InputView(View):
         selected_reaction_index_pct = None
         if selected_system_id:
             try:
-                sys = EveSolarSystem.objects.select_related("eve_constellation__eve_region").get(id=int(selected_system_id))
+                sys = EveSolarSystem.objects.select_related("constellation__region").get(id=int(selected_system_id))
                 selected_system_name = sys.name
             except EveSolarSystem.DoesNotExist:
                 sys = None
@@ -514,6 +519,7 @@ class InputView(View):
             current_stock: Dict[int, int],
             cum_profit: Decimal,
             supplemental_supply: Dict[int, int] | None = None,
+            origin_stock_remaining: Dict[int, int] | None = None,
         ):
             per_run_reqs = plan["per_run_requirements"]
             per_run_prods = plan["per_run_products"]
@@ -526,6 +532,8 @@ class InputView(View):
             stock_val_sum = Decimal("0")
 
             supplemental_supply = {int(k): int(v) for k, v in (supplemental_supply or {}).items()}
+            if origin_stock_remaining is None:
+                origin_stock_remaining = {int(k): int(v) for k, v in current_stock.items()}
 
             display_target_runs = 0
             for _tid, _need in per_run_reqs.items():
@@ -558,6 +566,13 @@ class InputView(View):
                 remain_after_children = required_total - from_children
                 from_stock = min(have_now, remain_after_children)
                 have_used = from_children + from_stock
+                from_origin_stock = min(int(origin_stock_remaining.get(int(tid), 0)), from_stock)
+                from_generated_stock = from_stock - from_origin_stock
+                if from_origin_stock:
+                    origin_stock_remaining[int(tid)] = max(
+                        0,
+                        int(origin_stock_remaining.get(int(tid), 0)) - int(from_origin_stock),
+                    )
 
                 need_missing_display = max(display_required_total - have_used, 0)
                 missing_val_with_broker = unit * Decimal(need_missing_display) * (
@@ -569,18 +584,18 @@ class InputView(View):
 
                 is_fuel = is_fuel_id(type_map, int(tid)) or ("fuel block" in (et.name or "").lower())
 
-                if use_buyback and from_stock > 0 and not is_fuel:
+                if use_buyback and from_origin_stock > 0 and not is_fuel:
                     unit_stock_eff = _buyback_unit(int(tid))
                 else:
                     unit_stock_eff = unit
 
                 have_val_children = unit * Decimal(from_children)
-                have_val_stock = unit_stock_eff * Decimal(from_stock)
+                have_val_stock = unit_stock_eff * Decimal(from_origin_stock)
                 have_val = have_val_children + have_val_stock
 
                 buyback_value_str = (
-                    f"{(unit_stock_eff * Decimal(from_stock)):.2f}"
-                    if (use_buyback and from_stock > 0 and not is_fuel)
+                    f"{(unit_stock_eff * Decimal(from_origin_stock)):.2f}"
+                    if (use_buyback and from_origin_stock > 0 and not is_fuel)
                     else None
                 )
 
@@ -605,7 +620,11 @@ class InputView(View):
                         "buyback_value": buyback_value_str,
                     }
                 )
-                consumed_cost_raw += (unit * Decimal(from_children)) + (unit_stock_eff * Decimal(from_stock))
+                consumed_cost_raw += (
+                    (unit * Decimal(from_children))
+                    + (unit_stock_eff * Decimal(from_origin_stock))
+                    + (unit * Decimal(from_generated_stock))
+                )
                 current_stock[int(tid)] = max(0, have_now - from_stock)
                 have_val_sum += have_val
                 need_val_sum += missing_val_with_broker
@@ -725,6 +744,7 @@ class InputView(View):
 
             cur = dict(stock)
             profit = Decimal("0")
+            origin_stock_remaining = {int(k): int(v) for k, v in cur.items()}
 
             feeders = find_feeders_for_parent(gp, priced_plans, type_map, max_count=2)
             feeder_supply: Dict[int, int] = {}
@@ -737,7 +757,7 @@ class InputView(View):
                 if r_fd <= 0:
                     continue
                 step_fd, cur_after_step1, profit = build_step(
-                    fd, r_fd, cur_after_step1, profit, supplemental_supply=None
+                    fd, r_fd, cur_after_step1, profit, supplemental_supply=None, origin_stock_remaining=origin_stock_remaining
                 )
                 step_fd["is_feeder"] = True
                 produced_map = {int(t): int(q * r_fd) for t, q in (fd.get("per_run_products") or {}).items()}
@@ -766,7 +786,7 @@ class InputView(View):
                 continue
 
             step1, cur_after_step1, profit = build_step(
-                gp, r1, cur_after_step1, profit, supplemental_supply=feeder_supply
+                gp, r1, cur_after_step1, profit, supplemental_supply=feeder_supply, origin_stock_remaining=origin_stock_remaining
             )
             step1["children"] = list(feeder_steps_for_parent or [])
             step1["has_children"] = bool(step1["children"])
@@ -832,7 +852,7 @@ class InputView(View):
             if best:
                 p2, r2 = best
                 cur2 = dict(cur_after_step1)
-                step2, cur_after2, profit2 = build_step(p2, r2, cur2, profit)
+                step2, cur_after2, profit2 = build_step(p2, r2, cur2, profit, origin_stock_remaining=origin_stock_remaining)
                 rendered.append(step2)
                 picked_any = True
 
@@ -907,7 +927,7 @@ class InputView(View):
 
                     pn, rN = bestN
                     cur_tmp = dict(cur_stock)
-                    stepN, cur_afterN, profitN = build_step(pn, rN, cur_tmp, cur_profit)
+                    stepN, cur_afterN, profitN = build_step(pn, rN, cur_tmp, cur_profit, origin_stock_remaining=origin_stock_remaining)
                     rendered.append(stepN)
 
                     pn_products = {int(t): int(q * rN) for t, q in pn["per_run_products"].items()}

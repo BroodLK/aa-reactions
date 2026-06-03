@@ -19,8 +19,22 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="487655fb-ea47-4dca-b34e-12f79776cac2" name="Changes" comment="maybe fix">
+      <change beforePath="$PROJECT_DIR$/.coveragerc" beforeDir="false" afterPath="$PROJECT_DIR$/.coveragerc" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.isort.cfg" beforeDir="false" afterPath="$PROJECT_DIR$/.isort.cfg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/aareactions/helper.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/helper.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aareactions/management/commands/import_reactions.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/management/commands/import_reactions.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aareactions/migrations/0001_initial.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/migrations/0001_initial.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aareactions/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aareactions/static/example/.gitkeep" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/aareactions/tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/tasks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aareactions/templates/aareactions/result.html" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/templates/aareactions/result.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aareactions/tests/test_example.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/aareactions/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/testauth/settings/local.py" beforeDir="false" afterPath="$PROJECT_DIR$/testauth/settings/local.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tox.ini" beforeDir="false" afterPath="$PROJECT_DIR$/tox.ini" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -28,7 +42,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="65" />
+    <option name="cachedIndexableFilesCount" value="66" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="FileTemplateManagerImpl">
@@ -90,10 +104,10 @@
 }</component>
   <component name="RecapSpentCounter">
     <option name="endsOfQuotaMs" value="1769612424816" />
-    <option name="spentUsd" value="0.01665925" />
+    <option name="spentUsd" value="0.0278478" />
   </component>
   <component name="RecapUselessUpdatesCounter">
-    <option name="suspendCountdown" value="4" />
+    <option name="suspendCountdown" value="0" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
@@ -109,7 +123,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-ca5e2b39c7df-6e1f45a539f7-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.29346.308" />
+        <option value="bundled-python-sdk-2653e85de345-6d6dccd035ac-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.31033.139" />
       </set>
     </attachedChunks>
   </component>
@@ -137,7 +151,15 @@
       <option name="project" value="LOCAL" />
       <updated>1767826044647</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="maybe fix">
+      <option name="closed" value="true" />
+      <created>1768510100721</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1768510100721</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">

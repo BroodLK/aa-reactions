@@ -5,7 +5,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
 
-from eveuniverse.models import EveType
+from eve_sde.models import ItemType as EveType
 from allianceauth.eveonline.models import EveCharacter
 from esi.models import Token
 

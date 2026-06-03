@@ -41,13 +41,13 @@
                                         {% endif %}
                                     </p>
                                     <table id="refinedTable" class="table table-sm align-middle mb-0 w-100">
-                                        <thead class="table-light">
+                                        <thead>
                                         <tr>
-                                            <th class="text-dark sort-th" data-col="0" data-type="str">Type</th>
-                                            <th class="text-end text-dark sort-th" data-col="1" data-type="num">Qty</th>
-                                            <th class="text-end text-dark sort-th" data-col="2" data-type="num">Unit Price</th>
-                                            <th class="text-end text-dark sort-th" data-col="3" data-type="num">Value</th>
-                                            <th class="text-end text-dark sort-th" data-col="4" data-type="num">m3</th>
+                                            <th class="sort-th" data-col="0" data-type="str">Type</th>
+                                            <th class="text-end sort-th" data-col="1" data-type="num">Qty</th>
+                                            <th class="text-end sort-th" data-col="2" data-type="num">Unit Price</th>
+                                            <th class="text-end sort-th" data-col="3" data-type="num">Value</th>
+                                            <th class="text-end sort-th" data-col="4" data-type="num">m3</th>
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -67,9 +67,9 @@
                         </div>
                     </div>
                     {% else %}
-                    <div class="alert alert-warning d-flex align-items-center" role="alert">
-                        <i class="fa-solid fa-triangle-exclamation me-2"></i>
-                        <div>No refined materials.</div>
+                    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-0" role="alert" style="opacity: 0.85;">
+                        <i class="fa-solid fa-circle-info me-2"></i>
+                        <div class="small">No refined materials from input.</div>
                     </div>
                     {% endif %}
                     {% if direct_inputs and direct_inputs|length > 0 %}
@@ -90,12 +90,12 @@
                                         {% endif %}
                                     </p>
                                     <table class="table table-sm align-middle mb-0 w-100">
-                                        <thead class="table-light">
+                                        <thead>
                                         <tr>
-                                            <th class="text-dark">Type</th>
-                                            <th class="text-end text-dark">Qty</th>
-                                            <th class="text-end text-dark">Unit Price</th>
-                                            <th class="text-end text-dark">Value</th>
+                                            <th>Type</th>
+                                            <th class="text-end">Qty</th>
+                                            <th class="text-end">Unit Price</th>
+                                            <th class="text-end">Value</th>
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -129,7 +129,7 @@
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm align-middle mb-0 w-100">
-                            <thead class="table-light">
+                            <thead>
                             <tr>
                                 <th>Type</th>
                                 <th class="text-end">Qty</th>
@@ -150,7 +150,7 @@
                         </table>
                     </div>
                     {% if unrefinables_total %}
-                    <div class="text-end mt-2"><span class="small text-muted">Total Value:</span> <strong>{{ unrefinables_total }}</strong></div>
+                    <div class="text-end mt-2"><span class="small text-muted">Total Value:</span> <strong>{{ unrefinables_total.value }}</strong></div>
                     {% endif %}
                 </div>
             </div>
