@@ -272,6 +272,7 @@
 
                             <ul class="ms-0">
                                 <li>Step Fees: <span class="small text-muted">{{ step.input_totals.fees }}</span></li>
+                                <li>Fee Source: <span class="small text-muted">{{ step.fee_source }}</span></li>
                                 <li class="fw-semibold mt-2">{{ step.product_name }}
                                     <ul class="ms-3">
                                         <li>Qty: <span class="small text-muted">{{ step.produced_qty|intcomma }}</span></li>
@@ -331,6 +332,7 @@
                                                     <li>Broker Fee: {{ c.debug_fees_explained.variables.broker_fee_pct }}</li>
                                                     <li>Sales Tax: {{ c.debug_fees_explained.variables.sales_tax_pct }}</li>
                                                     <li>Output Price Basis: {{ c.debug_fees_explained.variables.output_price_basis|title }}</li>
+                                                    <li>Step Fee Source: {{ c.debug_fees_explained.variables.step_fee_source }}</li>
                                                 </ul>
                                                 <div class="fw-semibold">Formulas</div>
                                                 <ul>

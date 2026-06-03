@@ -76,6 +76,28 @@
                 <label class="form-label">Cost index (%)</label>
                 {{ form.cost_index_pct }}
               </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Structure type ID</label>
+                {{ form.everef_structure_type_id }}
+                <div class="form-text">Used for the EVE Ref reaction cost call. Defaults from facility size.</div>
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Rig IDs</label>
+                {{ form.everef_rig_ids }}
+                <div class="form-text">Comma-separated EVE type IDs. Passed as repeated <code>rig_id</code> params.</div>
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">Advanced industry</label>
+                {{ form.advanced_industry_level }}
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label">System cost bonus (%)</label>
+                {{ form.system_cost_bonus_pct }}
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Material prices source</label>
+                {{ form.everef_material_prices }}
+              </div>
             </div>
 
             <div class="mt-3 form-check form-switch">
@@ -83,6 +105,12 @@
                      {% if settings and settings.buyback_enabled %}checked{% endif %}>
               <label class="form-check-label" for="use_buyback_for_stock">
                 Treat my starting stock as purchased via buyback ({{ settings.buyback_pct|default:"90.00" }}% {{ settings.buyback_basis|default:"buy"|title }})
+              </label>
+            </div>
+            <div class="mt-2 form-check form-switch">
+              {{ form.alpha_clone }}
+              <label class="form-check-label" for="{{ form.alpha_clone.id_for_label }}">
+                Treat the EVE Ref request as alpha
               </label>
             </div>
 

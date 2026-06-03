@@ -49,7 +49,7 @@ from .helper import (
 )
 from .models import CharacterToken, Reaction, ReactionSettings, SystemIndices
 from .pricing import resolve_price_value
-from .providers import get_industry_systems
+from .providers import default_reaction_structure_type_id, get_industry_systems, get_reaction_cost, parse_reaction_rig_ids
 from .tasks import update_character_skills, update_character_standings
 
 from eve_sde.models import ItemType as EveType, SolarSystem as EveSolarSystem
@@ -123,6 +123,9 @@ class InputView(View):
                 "facility_tax_pct": settings.facility_tax_pct,
                 "cost_index_pct": settings.cost_index_pct,
                 "scrap_metal_processing_level": settings.scrap_metal_processing_level,
+                "everef_structure_type_id": default_reaction_structure_type_id(settings.facility_size),
+                "advanced_industry_level": 5,
+                "system_cost_bonus_pct": Decimal("0.00"),
             }
         form = InputForm(initial=initial)
         return render(request, self.template_name, {"form": form, "settings": settings})
@@ -171,6 +174,14 @@ class InputView(View):
         rig_te = form.cleaned_data.get("rig_te") or settings.rig_te
         facility_tax_pct = Decimal(form.cleaned_data.get("facility_tax_pct") or settings.facility_tax_pct)
         cost_index_pct = Decimal(form.cleaned_data.get("cost_index_pct") or settings.cost_index_pct)
+        everef_structure_type_id = form.cleaned_data.get("everef_structure_type_id") or default_reaction_structure_type_id(
+            facility_size
+        )
+        everef_rig_ids = parse_reaction_rig_ids(form.cleaned_data.get("everef_rig_ids"))
+        advanced_industry_level = int(form.cleaned_data.get("advanced_industry_level") or 5)
+        system_cost_bonus_pct = Decimal(form.cleaned_data.get("system_cost_bonus_pct") or Decimal("0"))
+        alpha_clone = bool(form.cleaned_data.get("alpha_clone"))
+        everef_material_prices = (form.cleaned_data.get("everef_material_prices") or "").strip()
 
         selected_system_id = form.cleaned_data.get("solar_system_id")
         selected_system_name = None
@@ -398,6 +409,62 @@ class InputView(View):
         def _price_out(tid: int) -> Decimal:
             return price_output(int(tid), output_basis)
 
+        everef_cost_cache = {}
+        everef_cost_used = False
+
+        def _reaction_job_cost(plan: dict, runs: int):
+            nonlocal everef_cost_used
+
+            if runs <= 0:
+                return None
+
+            blueprint_type_id = plan.get("blueprint_type_id")
+            product_ids = sorted(int(tid) for tid in (plan.get("per_run_products") or {}).keys())
+            if not blueprint_type_id or not product_ids:
+                return None
+
+            cache_key = (
+                int(blueprint_type_id),
+                int(product_ids[0]),
+                int(runs),
+                int(selected_system_id or 0),
+                int(everef_structure_type_id or 0),
+                tuple(everef_rig_ids),
+                int(reaction_skill_level),
+                int(advanced_industry_level),
+                str(facility_tax_pct),
+                str(cost_index_pct),
+                str(system_cost_bonus_pct),
+                alpha_clone,
+                everef_material_prices,
+                facility_size,
+                facility_location,
+            )
+
+            if cache_key not in everef_cost_cache:
+                everef_cost_cache[cache_key] = get_reaction_cost(
+                    product_id=product_ids[0],
+                    blueprint_id=int(blueprint_type_id),
+                    runs=int(runs),
+                    reactions_level=reaction_skill_level,
+                    facility_tax_pct=facility_tax_pct,
+                    reaction_cost_pct=cost_index_pct,
+                    facility_size=facility_size,
+                    facility_location=facility_location,
+                    solar_system_id=selected_system_id,
+                    structure_type_id=everef_structure_type_id,
+                    rig_ids=everef_rig_ids,
+                    advanced_industry_level=advanced_industry_level,
+                    system_cost_bonus_pct=system_cost_bonus_pct,
+                    alpha_clone=alpha_clone,
+                    material_prices=everef_material_prices,
+                )
+
+            if everef_cost_cache[cache_key]:
+                everef_cost_used = True
+
+            return everef_cost_cache[cache_key]
+
         priced_plans = []
         opp_produced: Dict[int, int] = {}
 
@@ -485,7 +552,15 @@ class InputView(View):
             else:
                 out_fee_rate = (broker_fee_pct + stax_pct) / Decimal("100")
                 produced_net = products_value_raw * (Decimal("1") - out_fee_rate)
-            facility_fees_inputs = consumed_cost_raw * ((scc_pct + facility_tax_pct + cost_index_pct) / Decimal("100"))
+            local_fee_inputs = consumed_cost_raw * ((scc_pct + facility_tax_pct + cost_index_pct) / Decimal("100"))
+            everef_cost = _reaction_job_cost(
+                {
+                    "blueprint_type_id": getattr(rx, "blueprint_type_id", p.get("blueprint_type_id")),
+                    "per_run_products": per_run_prods,
+                },
+                runs_cap,
+            )
+            facility_fees_inputs = everef_cost["total_job_cost"] if everef_cost else local_fee_inputs
             priced_plans.append(
                 {
                     "name": name,
@@ -503,6 +578,7 @@ class InputView(View):
                     "time_per_run_str": fmt_duration(time_per_run_seconds),
                     "have_any": bool(p.get("have_any")),
                     "blueprint_type_id": getattr(rx, "blueprint_type_id", p.get("blueprint_type_id")),
+                    "fee_source": "everef" if everef_cost else "local",
                     "raw": {
                         "products_value": products_value_raw,
                         "produced_net": produced_net,
@@ -642,7 +718,9 @@ class InputView(View):
                 out_fee_rate = (broker_fee_pct + stax_pct) / Decimal("100")
                 produced_net = produced_value_display * (Decimal("1") - out_fee_rate)
 
-            fees_inputs = consumed_cost_raw * ((scc_pct + facility_tax_pct + cost_index_pct) / Decimal("100"))
+            local_fee_inputs = consumed_cost_raw * ((scc_pct + facility_tax_pct + cost_index_pct) / Decimal("100"))
+            everef_cost = _reaction_job_cost(plan, runs)
+            fees_inputs = everef_cost["total_job_cost"] if everef_cost else local_fee_inputs
             step_profit = produced_net - fees_inputs - need_val_sum - stock_val_sum
             cum_profit_next = cum_profit + step_profit
             step_time_seconds = int(runs * plan.get("time_per_run_seconds", 0))
@@ -660,6 +738,7 @@ class InputView(View):
                 "value_need": need_val_sum,
                 "fees": {"broker": Decimal("0"), "sales_tax": fees_inputs},
                 "fees_display": f"{fees_inputs:,.2f}",
+                "fee_source": "EVE Ref" if everef_cost else "Local formula",
                 "cumulative_profit": cum_profit_next,
                 "cumulative_profit_display": f"{cum_profit_next:,.2f}",
                 "step_profit": step_profit,
@@ -972,11 +1051,16 @@ class InputView(View):
                     "broker_fee_pct": f"{broker_fee_pct:.2f}%",
                     "sales_tax_pct": f"{stax_pct:.2f}%",
                     "output_price_basis": output_basis.title(),
+                    "step_fee_source": "EVE Ref total_job_cost where available" if everef_cost_used else "Local formula only",
                 },
                 "formulas": {
-                    "per_step_input_fees": f"Per-step input fees = Consumed Cost × "
-                                           f"({scc_pct:.2f}% + {facility_tax_pct:.2f}% + {cost_index_pct:.3f}%) "
-                                           f"→ Final Fees = ∑ steps = {final_fees:,.2f}",
+                    "per_step_input_fees": (
+                        "Per-step input fees = EVE Ref total_job_cost"
+                        if everef_cost_used
+                        else f"Per-step input fees = Consumed Cost × "
+                             f"({scc_pct:.2f}% + {facility_tax_pct:.2f}% + {cost_index_pct:.3f}%)"
+                    )
+                    + f" → Final Fees = ∑ steps = {final_fees:,.2f}",
                     "produced_net_buy": f"Buy: {final_value:,.2f} × (1 − {broker_fee_pct:.2f}%) = "
                                         f"{(final_value * (Decimal('1') - broker_fee_pct / Decimal('100'))):,.2f}",
                     "produced_net_sell": f"Sell: {final_value:,.2f} × (1 − ({broker_fee_pct:.2f}% + {stax_pct:.2f}%)) = "

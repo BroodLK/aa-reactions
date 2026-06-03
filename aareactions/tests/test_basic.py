@@ -8,6 +8,7 @@ from django.test import RequestFactory, TestCase
 from eve_sde.models import ItemType
 
 from aareactions.models import Reaction, ReactionSettings
+from aareactions.providers import build_reaction_cost_params, default_reaction_structure_type_id, parse_reaction_rig_ids
 from aareactions.views import InputView
 
 
@@ -64,6 +65,12 @@ class InputViewStepDisplayTests(TestCase):
             "rig_te": "none",
             "facility_tax_pct": "1.50",
             "cost_index_pct": "0.150",
+            "everef_structure_type_id": "35835",
+            "everef_rig_ids": "123,456",
+            "advanced_industry_level": "5",
+            "system_cost_bonus_pct": "-0.50",
+            "everef_material_prices": "sell",
+            "alpha_clone": "on",
             "solar_system_id": "",
         }
 
@@ -110,6 +117,8 @@ class InputViewStepDisplayTests(TestCase):
             "aareactions.views.price_input", side_effect=price_in
         ), patch(
             "aareactions.views.price_output", side_effect=price_out
+        ), patch(
+            "aareactions.views.get_reaction_cost", return_value=None
         ):
             response = InputView.as_view()(request)
 
@@ -126,3 +135,91 @@ class InputViewStepDisplayTests(TestCase):
         self.assertEqual(inputs_by_name["Input A"]["need_missing"], 0)
         self.assertEqual(inputs_by_name["Input B"]["have"], 1)
         self.assertEqual(inputs_by_name["Input B"]["need_missing"], 0)
+
+    def test_step_fees_use_everef_total_job_cost_when_available(self):
+        captured = {}
+        stock = {1: 10, 2: 100}
+        plans = [
+            {
+                "name": "Test Reaction",
+                "blueprint_type_id": 9001,
+                "time_seconds": 60,
+                "per_run_requirements": {1: 10, 2: 1},
+                "per_run_products": {3: 5},
+                "have_any": True,
+            }
+        ]
+
+        def fake_render(_request, _template_name, context):
+            captured["context"] = context
+            return HttpResponse("ok")
+
+        request = self.factory.post("/aareactions/", data=self._post_data())
+        request.user = self.user
+
+        with patch("aareactions.views.render", side_effect=fake_render), patch(
+            "aareactions.views.parse_input_lines", return_value=[]
+        ), patch(
+            "aareactions.views.resolve_types", return_value=[]
+        ), patch(
+            "aareactions.views.categorize_items", return_value=[]
+        ), patch(
+            "aareactions.views.filter_by_settings", return_value=[]
+        ), patch(
+            "aareactions.views.build_initial_stock", return_value=(stock, [])
+        ), patch(
+            "aareactions.views.plan_reactions_with_chain", return_value=plans
+        ), patch(
+            "aareactions.views.price_input", return_value=Decimal("10.00")
+        ), patch(
+            "aareactions.views.price_output", return_value=Decimal("100.00")
+        ), patch(
+            "aareactions.views.get_reaction_cost",
+            return_value={"total_job_cost": Decimal("42.00"), "query_params": []},
+        ):
+            response = InputView.as_view()(request)
+
+        self.assertEqual(response.status_code, 200)
+        chain = captured["context"]["chain_groups"][0][1][0]
+        step = chain["steps"][0]
+        self.assertEqual(step["fees_display"], "42.00")
+        self.assertEqual(step["fee_source"], "EVE Ref")
+
+
+class EveRefProviderTests(TestCase):
+    def test_build_reaction_cost_params_uses_form_inputs(self):
+        params = build_reaction_cost_params(
+            product_id=3,
+            blueprint_id=9001,
+            runs=4,
+            reactions_level=5,
+            facility_tax_pct=Decimal("1.50"),
+            reaction_cost_pct=Decimal("0.150"),
+            facility_size="medium",
+            facility_location="low",
+            solar_system_id=30000142,
+            structure_type_id=None,
+            rig_ids=parse_reaction_rig_ids("37180, 37183"),
+            advanced_industry_level=4,
+            system_cost_bonus_pct=Decimal("-0.50"),
+            alpha_clone=True,
+            material_prices="sell",
+        )
+
+        self.assertIn(("product_id", "3"), params)
+        self.assertIn(("blueprint_id", "9001"), params)
+        self.assertIn(("runs", "4"), params)
+        self.assertIn(("reactions", "5"), params)
+        self.assertIn(("system_id", "30000142"), params)
+        self.assertIn(("structure_type_id", str(default_reaction_structure_type_id("medium"))), params)
+        self.assertIn(("rig_id", "37180"), params)
+        self.assertIn(("rig_id", "37183"), params)
+        self.assertIn(("facility_tax", "0.015"), params)
+        self.assertIn(("reaction_cost", "0.0015"), params)
+        self.assertIn(("advanced_industry", "4"), params)
+        self.assertIn(("system_cost_bonus", "-0.005"), params)
+        self.assertIn(("alpha", "true"), params)
+        self.assertIn(("material_prices", "sell"), params)
+
+    def test_parse_reaction_rig_ids_filters_invalid_values(self):
+        self.assertEqual(parse_reaction_rig_ids("37180, bad, 37180,\n37183"), [37180, 37183])

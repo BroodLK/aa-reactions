@@ -104,6 +104,54 @@ class InputForm(forms.Form):
         widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.001"}),
         required=True,
     )
+    everef_structure_type_id = forms.IntegerField(
+        label="EVE Ref structure type ID",
+        min_value=1,
+        widget=forms.NumberInput(attrs={"class": "form-control"}),
+        required=False,
+    )
+    everef_rig_ids = forms.CharField(
+        label="EVE Ref rig IDs",
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Comma separated rig IDs",
+            }
+        ),
+        required=False,
+    )
+    advanced_industry_level = forms.IntegerField(
+        label="Advanced industry",
+        min_value=0,
+        max_value=5,
+        widget=forms.NumberInput(attrs={"class": "form-control"}),
+        required=False,
+        initial=5,
+    )
+    system_cost_bonus_pct = forms.DecimalField(
+        label="System cost bonus (%)",
+        min_value=-100,
+        max_value=100,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+        required=False,
+        initial=0,
+    )
+    everef_material_prices = forms.CharField(
+        label="Material prices source",
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Optional EVE Ref material_prices value",
+            }
+        ),
+        required=False,
+    )
+    alpha_clone = forms.BooleanField(
+        label="Alpha clone",
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
     solar_system_id = forms.IntegerField(
         required=False,
         widget=forms.HiddenInput()
