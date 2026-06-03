@@ -18,23 +18,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="487655fb-ea47-4dca-b34e-12f79776cac2" name="Changes" comment="maybe fix">
-      <change beforePath="$PROJECT_DIR$/.coveragerc" beforeDir="false" afterPath="$PROJECT_DIR$/.coveragerc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.isort.cfg" beforeDir="false" afterPath="$PROJECT_DIR$/.isort.cfg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/helper.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/helper.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/management/commands/import_reactions.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/management/commands/import_reactions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/migrations/0001_initial.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/migrations/0001_initial.py" afterDir="false" />
+    <list default="true" id="487655fb-ea47-4dca-b34e-12f79776cac2" name="Changes" comment="Add `UserReactionSettings` model and integrate user-specific reaction settings into forms, views, and tests">
+      <change beforePath="$PROJECT_DIR$/aareactions/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/forms.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aareactions/migrations/0007_userreactionsettings.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/migrations/0007_userreactionsettings.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/aareactions/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/static/example/.gitkeep" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/tasks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aareactions/templates/aareactions/input.html" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/templates/aareactions/input.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/aareactions/templates/aareactions/result.html" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/templates/aareactions/result.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/tests/test_example.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/aareactions/tests/test_basic.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/tests/test_basic.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/aareactions/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/testauth/settings/local.py" beforeDir="false" afterPath="$PROJECT_DIR$/testauth/settings/local.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tox.ini" beforeDir="false" afterPath="$PROJECT_DIR$/tox.ini" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -159,12 +150,66 @@
       <option name="project" value="LOCAL" />
       <updated>1768510100721</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Switch to `django-eveonline-sde` for EVE data sources and update related dependencies.">
+      <option name="closed" value="true" />
+      <created>1780503406250</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1780503406250</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Add `setup.py` and basic test structure for `aa-reactions`.">
+      <option name="closed" value="true" />
+      <created>1780503427606</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1780503427606</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Refactor `InputView` to improve reaction run calculations and add comprehensive tests for input and output accuracy.">
+      <option name="closed" value="true" />
+      <created>1780521412611</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1780521412611</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Refactor and modularize `aareactions` tasks, pricing, and character handling to improve maintainability and extend functionality.">
+      <option name="closed" value="true" />
+      <created>1780521949330</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1780521949330</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Add EVE Ref pricing integration and advanced reaction cost calculations">
+      <option name="closed" value="true" />
+      <created>1780523562915</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1780523562915</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Add `UserReactionSettings` model and integrate user-specific reaction settings into forms, views, and tests">
+      <option name="closed" value="true" />
+      <created>1780524874872</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1780524874872</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial" />
     <MESSAGE value="maybe fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="maybe fix" />
+    <MESSAGE value="Switch to `django-eveonline-sde` for EVE data sources and update related dependencies." />
+    <MESSAGE value="Add `setup.py` and basic test structure for `aa-reactions`." />
+    <MESSAGE value="Refactor `InputView` to improve reaction run calculations and add comprehensive tests for input and output accuracy." />
+    <MESSAGE value="Refactor and modularize `aareactions` tasks, pricing, and character handling to improve maintainability and extend functionality." />
+    <MESSAGE value="Add EVE Ref pricing integration and advanced reaction cost calculations" />
+    <MESSAGE value="Add `UserReactionSettings` model and integrate user-specific reaction settings into forms, views, and tests" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add `UserReactionSettings` model and integrate user-specific reaction settings into forms, views, and tests" />
   </component>
 </project>

@@ -25,6 +25,7 @@ class Migration(migrations.Migration):
                 ("broker_fee_pct", models.DecimalField(decimal_places=2, default=Decimal("3.00"), max_digits=6, validators=[django.core.validators.MinValueValidator(Decimal("0")), django.core.validators.MaxValueValidator(Decimal("100"))])),
                 ("accounting_level", models.PositiveSmallIntegerField(default=5, validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(5)])),
                 ("reaction_skill_level", models.PositiveSmallIntegerField(default=5, validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(5)])),
+                ("number_of_slots", models.PositiveIntegerField(default=1, validators=[django.core.validators.MinValueValidator(1)])),
                 ("facility_size", models.CharField(choices=[("medium", "Medium"), ("large", "Large")], default="medium", max_length=8)),
                 ("facility_location", models.CharField(choices=[("low", "Low"), ("null", "Null"), ("wh", "WH")], default="low", max_length=8)),
                 ("rig_me", models.CharField(choices=[("none", "None"), ("t1", "T1 ME"), ("t2", "T2 ME")], default="none", max_length=8)),

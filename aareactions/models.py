@@ -136,6 +136,7 @@ class UserReactionSettings(models.Model):
     )
     accounting_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
     reaction_skill_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    number_of_slots = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
     facility_size = models.CharField(max_length=8, choices=(("medium", "Medium"), ("large", "Large")), default="medium")
     facility_location = models.CharField(max_length=8, choices=(("low", "Low"), ("null", "Null"), ("wh", "WH")), default="low")
     rig_me = models.CharField(max_length=8, choices=(("none", "None"), ("t1", "T1 ME"), ("t2", "T2 ME")), default="none")

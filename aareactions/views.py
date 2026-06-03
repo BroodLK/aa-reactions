@@ -131,6 +131,7 @@ class InputView(View):
             "broker_fee_pct": source.broker_fee_pct,
             "accounting_level": source.accounting_level,
             "reaction_skill_level": source.reaction_skill_level,
+            "number_of_slots": getattr(user_settings, "number_of_slots", 1),
             "facility_size": facility_size,
             "facility_location": source.facility_location,
             "rig_me": source.rig_me,
@@ -201,6 +202,7 @@ class InputView(View):
         broker_fee_pct = Decimal(form.cleaned_data.get("broker_fee_pct") or settings.broker_fee_pct)
         accounting_level = int(form.cleaned_data.get("accounting_level") or settings.accounting_level)
         reaction_skill_level = int(form.cleaned_data.get("reaction_skill_level") or settings.reaction_skill_level)
+        number_of_slots = int(form.cleaned_data.get("number_of_slots") or 1)
         facility_size = form.cleaned_data.get("facility_size") or settings.facility_size
         facility_location = form.cleaned_data.get("facility_location") or settings.facility_location
         rig_me = form.cleaned_data.get("rig_me") or settings.rig_me
@@ -326,6 +328,7 @@ class InputView(View):
                 "broker_fee_pct": broker_fee_pct,
                 "accounting_level": accounting_level,
                 "reaction_skill_level": reaction_skill_level,
+                "number_of_slots": number_of_slots,
                 "facility_size": facility_size,
                 "facility_location": facility_location,
                 "rig_me": rig_me,
@@ -783,12 +786,17 @@ class InputView(View):
             fees_inputs = everef_cost["total_job_cost"] if everef_cost else local_fee_inputs
             step_profit = produced_net - fees_inputs - need_val_sum - stock_val_sum
             cum_profit_next = cum_profit + step_profit
-            step_time_seconds = int(runs * plan.get("time_per_run_seconds", 0))
+            step_batches = 0
+            if runs > 0:
+                step_batches = ((int(runs) - 1) // number_of_slots) + 1
+            step_time_seconds = int(step_batches * plan.get("time_per_run_seconds", 0))
 
             step = {
                 "kind": "reaction",
                 "title": plan["name"],
                 "runs": runs,
+                "number_of_slots": number_of_slots,
+                "time_batches": step_batches,
                 "inputs": inputs,
                 "product_name": product_name,
                 "produced_qty": produced_qty_display,

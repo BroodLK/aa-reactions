@@ -64,6 +64,13 @@ class InputForm(forms.Form):
         widget=forms.NumberInput(attrs={"class": "form-control"}),
         required=True,
     )
+    number_of_slots = forms.IntegerField(
+        label="Number of slots",
+        min_value=1,
+        widget=forms.NumberInput(attrs={"class": "form-control"}),
+        required=True,
+        initial=1,
+    )
     facility_size = forms.ChoiceField(
         label="Facility size",
         choices=FACILITY_SIZE_CHOICES,

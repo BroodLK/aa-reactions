@@ -7,6 +7,7 @@ from django.test import RequestFactory, TestCase
 
 from eve_sde.models import ItemType
 
+from aareactions.helper import effective_time_seconds, te_bonus_pct
 from aareactions.models import Reaction, ReactionSettings, UserReactionSettings
 from aareactions.providers import build_reaction_cost_params, default_reaction_structure_type_id, parse_reaction_rig_ids
 from aareactions.views import InputView
@@ -59,6 +60,7 @@ class InputViewStepDisplayTests(TestCase):
             "broker_fee_pct": "3.00",
             "accounting_level": "5",
             "reaction_skill_level": "5",
+            "number_of_slots": "1",
             "facility_size": "medium",
             "facility_location": "low",
             "rig_me": "none",
@@ -196,6 +198,7 @@ class InputViewStepDisplayTests(TestCase):
             broker_fee_pct=Decimal("2.25"),
             accounting_level=4,
             reaction_skill_level=3,
+            number_of_slots=7,
             facility_size="large",
             facility_location="null",
             rig_me="t2",
@@ -230,6 +233,7 @@ class InputViewStepDisplayTests(TestCase):
         form = captured["context"]["form"]
         self.assertEqual(form["refine_rate"].value(), Decimal("87.50"))
         self.assertEqual(form["facility_size"].value(), "large")
+        self.assertEqual(form["number_of_slots"].value(), 7)
         self.assertEqual(form["everef_structure_type_id"].value(), 35836)
         self.assertEqual(form["use_buyback_for_stock"].value(), True)
         self.assertEqual(captured["context"]["selected_system_name"], "Jita")
@@ -280,10 +284,65 @@ class InputViewStepDisplayTests(TestCase):
         user_settings = UserReactionSettings.objects.get(user=self.user)
         self.assertEqual(user_settings.refine_rate, Decimal("80.00"))
         self.assertEqual(user_settings.facility_size, "medium")
+        self.assertEqual(user_settings.number_of_slots, 1)
         self.assertEqual(user_settings.everef_structure_type_id, 35835)
         self.assertEqual(user_settings.everef_rig_ids, "123,456")
         self.assertEqual(user_settings.use_buyback_for_stock, True)
         self.assertEqual(user_settings.everef_material_prices, "sell")
+
+    def test_step_time_uses_slots_per_step_with_ceiling(self):
+        captured = {}
+        stock = {1: 510, 2: 51}
+        plans = [
+            {
+                "name": "Test Reaction",
+                "blueprint_type_id": 9001,
+                "time_seconds": 60,
+                "per_run_requirements": {1: 10, 2: 1},
+                "per_run_products": {3: 5},
+                "have_any": True,
+            }
+        ]
+        post_data = self._post_data()
+        post_data["number_of_slots"] = "50"
+
+        def fake_render(_request, _template_name, context):
+            captured["context"] = context
+            return HttpResponse("ok")
+
+        request = self.factory.post("/aareactions/", data=post_data)
+        request.user = self.user
+
+        with patch("aareactions.views.render", side_effect=fake_render), patch(
+            "aareactions.views.parse_input_lines", return_value=[]
+        ), patch(
+            "aareactions.views.resolve_types", return_value=[]
+        ), patch(
+            "aareactions.views.categorize_items", return_value=[]
+        ), patch(
+            "aareactions.views.filter_by_settings", return_value=[]
+        ), patch(
+            "aareactions.views.build_initial_stock", return_value=(stock, [])
+        ), patch(
+            "aareactions.views.plan_reactions_with_chain", return_value=plans
+        ), patch(
+            "aareactions.views.price_input", return_value=Decimal("10.00")
+        ), patch(
+            "aareactions.views.price_output", return_value=Decimal("100.00")
+        ), patch(
+            "aareactions.views.get_reaction_cost", return_value=None
+        ):
+            response = InputView.as_view()(request)
+
+        self.assertEqual(response.status_code, 200)
+        chain = captured["context"]["chain_groups"][0][1][0]
+        step = chain["steps"][0]
+        self.assertEqual(step["runs"], 51)
+        self.assertEqual(step["number_of_slots"], 50)
+        self.assertEqual(step["time_batches"], 2)
+        expected_per_run_time = int(effective_time_seconds(60, 5, "medium", te_bonus_pct("none", "low")))
+        self.assertEqual(step["time_total_seconds"], expected_per_run_time * 2)
+        self.assertEqual(chain["total_time_seconds"], expected_per_run_time * 2)
 
 
 class EveRefProviderTests(TestCase):

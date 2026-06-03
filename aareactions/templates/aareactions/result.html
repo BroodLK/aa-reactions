@@ -213,6 +213,9 @@
                                 0s
                                 {% endif %}
                             </strong>
+                            {% if step.kind == 'reaction' and step.runs and step.number_of_slots %}
+                            <span class="ms-1">({{ step.time_batches }} batches across {{ step.number_of_slots }} slots)</span>
+                            {% endif %}
                             </div>
                             <div class="mb-2 fw-semibold">Inputs</div>
                             {% for m in step.inputs %}
