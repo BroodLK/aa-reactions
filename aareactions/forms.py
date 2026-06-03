@@ -152,6 +152,11 @@ class InputForm(forms.Form):
         required=False,
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+    use_buyback_for_stock = forms.BooleanField(
+        label="Use buyback for stock",
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
     solar_system_id = forms.IntegerField(
         required=False,
         widget=forms.HiddenInput()

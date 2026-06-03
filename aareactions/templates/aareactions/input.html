@@ -13,9 +13,9 @@
             {% csrf_token %}
             <div class="mb-3">
               <label class="form-label" for="system_name">Solar System</label>
-              <input id="system_name" type="text" class="form-control" placeholder="Start typing (e.g., Jita, Amarr)…" autocomplete="off">
+              <input id="system_name" type="text" class="form-control" placeholder="Start typing (e.g., Jita, Amarr)..." autocomplete="off" value="{{ selected_system_name|default:'' }}">
               {{ form.solar_system_id }}
-              <div class="form-text">Pick a solar system; we’ll fetch its Industry (Reactions) cost index from ESI.</div>
+              <div class="form-text">Pick a solar system; we'll fetch its Industry (Reactions) cost index from ESI.</div>
               <div id="system_results" class="list-group mt-2" style="max-height:220px; overflow:auto; display:none;"></div>
             </div>
 
@@ -101,9 +101,8 @@
             </div>
 
             <div class="mt-3 form-check form-switch">
-              <input class="form-check-input" type="checkbox" id="use_buyback_for_stock" name="use_buyback_for_stock"
-                     {% if settings and settings.buyback_enabled %}checked{% endif %}>
-              <label class="form-check-label" for="use_buyback_for_stock">
+              {{ form.use_buyback_for_stock }}
+              <label class="form-check-label" for="{{ form.use_buyback_for_stock.id_for_label }}">
                 Treat my starting stock as purchased via buyback ({{ settings.buyback_pct|default:"90.00" }}% {{ settings.buyback_basis|default:"buy"|title }})
               </label>
             </div>

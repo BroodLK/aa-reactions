@@ -47,7 +47,7 @@ from .helper import (
     self_recovery_loss,
     te_bonus_pct,
 )
-from .models import CharacterToken, Reaction, ReactionSettings, SystemIndices
+from .models import CharacterToken, Reaction, ReactionSettings, SystemIndices, UserReactionSettings
 from .pricing import resolve_price_value
 from .providers import default_reaction_structure_type_id, get_industry_systems, get_reaction_cost, parse_reaction_rig_ids
 from .tasks import update_character_skills, update_character_standings
@@ -105,39 +105,72 @@ def solar_system_search(request):
 class InputView(View):
     template_name = "aareactions/input.html"
 
+    @staticmethod
+    def _selected_system_name(solar_system_id):
+        if not solar_system_id:
+            return None
+
+        try:
+            return EveSolarSystem.objects.only("name").get(id=int(solar_system_id)).name
+        except (EveSolarSystem.DoesNotExist, TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _build_initial(default_settings, user_settings=None):
+        if not default_settings:
+            return {}
+
+        source = user_settings or default_settings
+        facility_size = getattr(source, "facility_size", default_settings.facility_size)
+        structure_type_id = getattr(user_settings, "everef_structure_type_id", None) if user_settings else None
+
+        return {
+            "refine_rate": source.refine_rate,
+            "input_price_basis": source.input_price_basis,
+            "output_price_basis": source.output_price_basis,
+            "broker_fee_pct": source.broker_fee_pct,
+            "accounting_level": source.accounting_level,
+            "reaction_skill_level": source.reaction_skill_level,
+            "facility_size": facility_size,
+            "facility_location": source.facility_location,
+            "rig_me": source.rig_me,
+            "rig_te": source.rig_te,
+            "facility_tax_pct": source.facility_tax_pct,
+            "cost_index_pct": source.cost_index_pct,
+            "scrap_metal_processing_level": source.scrap_metal_processing_level,
+            "solar_system_id": getattr(user_settings, "solar_system_id", None),
+            "everef_structure_type_id": structure_type_id or default_reaction_structure_type_id(facility_size),
+            "everef_rig_ids": getattr(user_settings, "everef_rig_ids", ""),
+            "advanced_industry_level": getattr(user_settings, "advanced_industry_level", 5),
+            "system_cost_bonus_pct": getattr(user_settings, "system_cost_bonus_pct", Decimal("0.00")),
+            "everef_material_prices": getattr(user_settings, "everef_material_prices", ""),
+            "alpha_clone": getattr(user_settings, "alpha_clone", False),
+            "use_buyback_for_stock": getattr(user_settings, "use_buyback_for_stock", default_settings.buyback_enabled),
+        }
+
     def get(self, request):
         settings = ReactionSettings.objects.order_by("id").first()
-        initial = {}
-        if settings:
-            initial = {
-                "refine_rate": settings.refine_rate,
-                "input_price_basis": settings.input_price_basis,
-                "output_price_basis": settings.output_price_basis,
-                "broker_fee_pct": settings.broker_fee_pct,
-                "accounting_level": settings.accounting_level,
-                "reaction_skill_level": settings.reaction_skill_level,
-                "facility_size": settings.facility_size,
-                "facility_location": settings.facility_location,
-                "rig_me": settings.rig_me,
-                "rig_te": settings.rig_te,
-                "facility_tax_pct": settings.facility_tax_pct,
-                "cost_index_pct": settings.cost_index_pct,
-                "scrap_metal_processing_level": settings.scrap_metal_processing_level,
-                "everef_structure_type_id": default_reaction_structure_type_id(settings.facility_size),
-                "advanced_industry_level": 5,
-                "system_cost_bonus_pct": Decimal("0.00"),
-            }
+        user_settings = UserReactionSettings.objects.filter(user=request.user).first()
+        initial = self._build_initial(settings, user_settings)
         form = InputForm(initial=initial)
-        return render(request, self.template_name, {"form": form, "settings": settings})
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "settings": settings,
+                "selected_system_name": self._selected_system_name(initial.get("solar_system_id")),
+            },
+        )
 
     def post(self, request):
         form = InputForm(request.POST)
         settings = ReactionSettings.objects.order_by("id").first()
         if not settings:
             messages.error(request, "Settings not configured.")
-            return render(request, self.template_name, {"form": form, "settings": None})
+            return render(request, self.template_name, {"form": form, "settings": None, "selected_system_name": None})
         if not form.is_valid():
-            return render(request, self.template_name, {"form": form, "settings": settings})
+            return render(request, self.template_name, {"form": form, "settings": settings, "selected_system_name": None})
 
         if Reaction.objects.count() == 0:
             messages.warning(
@@ -284,7 +317,34 @@ class InputView(View):
 
         scc_pct = Decimal("4.00")
 
-        use_buyback = bool(request.POST.get("use_buyback_for_stock"))
+        UserReactionSettings.objects.update_or_create(
+            user=request.user,
+            defaults={
+                "refine_rate": refine_rate_pct,
+                "input_price_basis": input_basis,
+                "output_price_basis": output_basis,
+                "broker_fee_pct": broker_fee_pct,
+                "accounting_level": accounting_level,
+                "reaction_skill_level": reaction_skill_level,
+                "facility_size": facility_size,
+                "facility_location": facility_location,
+                "rig_me": rig_me,
+                "rig_te": rig_te,
+                "facility_tax_pct": facility_tax_pct,
+                "cost_index_pct": cost_index_pct,
+                "scrap_metal_processing_level": smp_level,
+                "solar_system_id": int(selected_system_id) if selected_system_id else None,
+                "everef_structure_type_id": int(everef_structure_type_id) if everef_structure_type_id else None,
+                "everef_rig_ids": ",".join(str(rig_id) for rig_id in everef_rig_ids),
+                "advanced_industry_level": advanced_industry_level,
+                "system_cost_bonus_pct": system_cost_bonus_pct,
+                "everef_material_prices": everef_material_prices,
+                "alpha_clone": alpha_clone,
+                "use_buyback_for_stock": bool(form.cleaned_data.get("use_buyback_for_stock")),
+            },
+        )
+
+        use_buyback = bool(form.cleaned_data.get("use_buyback_for_stock"))
         buyback_pct = Decimal(getattr(settings, "buyback_pct", Decimal("90.00")))
         buyback_basis = getattr(settings, "buyback_basis", "buy")
         buyback_mult = (buyback_pct / Decimal("100")).quantize(Decimal("0.0001"))

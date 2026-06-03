@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import ClassVar
 
+from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
@@ -120,6 +121,55 @@ class ReactionSettings(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class UserReactionSettings(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="aareactions_settings")
+    refine_rate = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("80.00"))
+    input_price_basis = models.CharField(max_length=8, choices=(("buy", "Buy"), ("sell", "Sell")), default="buy")
+    output_price_basis = models.CharField(max_length=8, choices=(("buy", "Buy"), ("sell", "Sell")), default="sell")
+    broker_fee_pct = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal("3.00"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+    )
+    accounting_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    reaction_skill_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    facility_size = models.CharField(max_length=8, choices=(("medium", "Medium"), ("large", "Large")), default="medium")
+    facility_location = models.CharField(max_length=8, choices=(("low", "Low"), ("null", "Null"), ("wh", "WH")), default="low")
+    rig_me = models.CharField(max_length=8, choices=(("none", "None"), ("t1", "T1 ME"), ("t2", "T2 ME")), default="none")
+    rig_te = models.CharField(max_length=8, choices=(("none", "None"), ("t1", "T1 TE"), ("t2", "T2 TE")), default="none")
+    facility_tax_pct = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal("1.50"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+    )
+    cost_index_pct = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        default=Decimal("0.150"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+    )
+    scrap_metal_processing_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    solar_system_id = models.IntegerField(blank=True, null=True)
+    everef_structure_type_id = models.IntegerField(blank=True, null=True)
+    everef_rig_ids = models.CharField(max_length=255, blank=True, default="")
+    advanced_industry_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    system_cost_bonus_pct = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
+    everef_material_prices = models.CharField(max_length=64, blank=True, default="")
+    alpha_clone = models.BooleanField(default=False)
+    use_buyback_for_stock = models.BooleanField(default=False)
+    last_update = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        default_permissions = ()
+        verbose_name = "User Reaction Settings"
+        verbose_name_plural = "User Reaction Settings"
+
+    def __str__(self) -> str:
+        return str(self.user)
 
 
 class Reaction(models.Model):

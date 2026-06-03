@@ -7,7 +7,7 @@ from django.test import RequestFactory, TestCase
 
 from eve_sde.models import ItemType
 
-from aareactions.models import Reaction, ReactionSettings
+from aareactions.models import Reaction, ReactionSettings, UserReactionSettings
 from aareactions.providers import build_reaction_cost_params, default_reaction_structure_type_id, parse_reaction_rig_ids
 from aareactions.views import InputView
 
@@ -71,6 +71,7 @@ class InputViewStepDisplayTests(TestCase):
             "system_cost_bonus_pct": "-0.50",
             "everef_material_prices": "sell",
             "alpha_clone": "on",
+            "use_buyback_for_stock": "on",
             "solar_system_id": "",
         }
 
@@ -184,6 +185,105 @@ class InputViewStepDisplayTests(TestCase):
         step = chain["steps"][0]
         self.assertEqual(step["fees_display"], "42.00")
         self.assertEqual(step["fee_source"], "EVE Ref")
+
+    def test_get_prefills_saved_user_defaults(self):
+        captured = {}
+        UserReactionSettings.objects.create(
+            user=self.user,
+            refine_rate=Decimal("87.50"),
+            input_price_basis="sell",
+            output_price_basis="buy",
+            broker_fee_pct=Decimal("2.25"),
+            accounting_level=4,
+            reaction_skill_level=3,
+            facility_size="large",
+            facility_location="null",
+            rig_me="t2",
+            rig_te="t1",
+            facility_tax_pct=Decimal("2.00"),
+            cost_index_pct=Decimal("0.321"),
+            scrap_metal_processing_level=2,
+            solar_system_id=30000142,
+            everef_structure_type_id=35836,
+            everef_rig_ids="37180,37183",
+            advanced_industry_level=4,
+            system_cost_bonus_pct=Decimal("-0.50"),
+            everef_material_prices="sell",
+            alpha_clone=True,
+            use_buyback_for_stock=True,
+        )
+
+        def fake_render(_request, _template_name, context):
+            captured["context"] = context
+            return HttpResponse("ok")
+
+        request = self.factory.get("/aareactions/")
+        request.user = self.user
+
+        with patch("aareactions.views.render", side_effect=fake_render), patch(
+            "aareactions.views.EveSolarSystem.objects.only"
+        ) as mock_only:
+            mock_only.return_value.get.return_value.name = "Jita"
+            response = InputView.as_view()(request)
+
+        self.assertEqual(response.status_code, 200)
+        form = captured["context"]["form"]
+        self.assertEqual(form["refine_rate"].value(), Decimal("87.50"))
+        self.assertEqual(form["facility_size"].value(), "large")
+        self.assertEqual(form["everef_structure_type_id"].value(), 35836)
+        self.assertEqual(form["use_buyback_for_stock"].value(), True)
+        self.assertEqual(captured["context"]["selected_system_name"], "Jita")
+
+    def test_post_saves_user_defaults(self):
+        captured = {}
+        stock = {1: 10, 2: 100}
+        plans = [
+            {
+                "name": "Test Reaction",
+                "blueprint_type_id": 9001,
+                "time_seconds": 60,
+                "per_run_requirements": {1: 10, 2: 1},
+                "per_run_products": {3: 5},
+                "have_any": True,
+            }
+        ]
+
+        def fake_render(_request, _template_name, context):
+            captured["context"] = context
+            return HttpResponse("ok")
+
+        request = self.factory.post("/aareactions/", data=self._post_data())
+        request.user = self.user
+
+        with patch("aareactions.views.render", side_effect=fake_render), patch(
+            "aareactions.views.parse_input_lines", return_value=[]
+        ), patch(
+            "aareactions.views.resolve_types", return_value=[]
+        ), patch(
+            "aareactions.views.categorize_items", return_value=[]
+        ), patch(
+            "aareactions.views.filter_by_settings", return_value=[]
+        ), patch(
+            "aareactions.views.build_initial_stock", return_value=(stock, [])
+        ), patch(
+            "aareactions.views.plan_reactions_with_chain", return_value=plans
+        ), patch(
+            "aareactions.views.price_input", return_value=Decimal("10.00")
+        ), patch(
+            "aareactions.views.price_output", return_value=Decimal("100.00")
+        ), patch(
+            "aareactions.views.get_reaction_cost", return_value=None
+        ):
+            response = InputView.as_view()(request)
+
+        self.assertEqual(response.status_code, 200)
+        user_settings = UserReactionSettings.objects.get(user=self.user)
+        self.assertEqual(user_settings.refine_rate, Decimal("80.00"))
+        self.assertEqual(user_settings.facility_size, "medium")
+        self.assertEqual(user_settings.everef_structure_type_id, 35835)
+        self.assertEqual(user_settings.everef_rig_ids, "123,456")
+        self.assertEqual(user_settings.use_buyback_for_stock, True)
+        self.assertEqual(user_settings.everef_material_prices, "sell")
 
 
 class EveRefProviderTests(TestCase):
