@@ -10,7 +10,7 @@ from eve_sde.models import ItemType
 from aareactions.helper import effective_time_seconds, te_bonus_pct
 from aareactions.models import Reaction, ReactionSettings, UserReactionSettings
 from aareactions.providers import build_reaction_cost_params, default_reaction_structure_type_id, parse_reaction_rig_ids
-from aareactions.views import InputView
+from aareactions.views import InputView, split_runs_across_slots
 
 
 class InputViewStepDisplayTests(TestCase):
@@ -290,7 +290,7 @@ class InputViewStepDisplayTests(TestCase):
         self.assertEqual(user_settings.use_buyback_for_stock, True)
         self.assertEqual(user_settings.everef_material_prices, "sell")
 
-    def test_step_time_uses_slots_per_step_with_ceiling(self):
+    def test_step_time_uses_slots_per_step_distribution(self):
         captured = {}
         stock = {1: 510, 2: 51}
         plans = [
@@ -337,15 +337,30 @@ class InputViewStepDisplayTests(TestCase):
         self.assertEqual(response.status_code, 200)
         chain = captured["context"]["chain_groups"][0][1][0]
         step = chain["steps"][0]
+        runs_per_slot = split_runs_across_slots(step["runs"], step["number_of_slots"])
         self.assertEqual(step["runs"], 51)
         self.assertEqual(step["number_of_slots"], 50)
-        self.assertEqual(step["time_batches"], 2)
+        self.assertEqual(len(runs_per_slot), 50)
+        self.assertEqual(sum(runs_per_slot), 51)
+        self.assertEqual(runs_per_slot.count(2), 1)
+        self.assertEqual(runs_per_slot.count(1), 49)
+        self.assertEqual(step["time_batches"], max(runs_per_slot))
+        self.assertEqual(step["runs_per_slot_total"], sum(runs_per_slot))
         expected_per_run_time = int(effective_time_seconds(60, 5, "medium", te_bonus_pct("none", "low")))
-        self.assertEqual(step["time_total_seconds"], expected_per_run_time * 2)
-        self.assertEqual(chain["total_time_seconds"], expected_per_run_time * 2)
+        self.assertEqual(step["time_total_seconds"], expected_per_run_time * max(runs_per_slot))
+        self.assertEqual(chain["total_time_seconds"], expected_per_run_time * max(runs_per_slot))
 
 
 class EveRefProviderTests(TestCase):
+    def test_split_runs_across_slots_preserves_total_runs(self):
+        runs_per_slot = split_runs_across_slots(1298, 50)
+
+        self.assertEqual(len(runs_per_slot), 50)
+        self.assertEqual(sum(runs_per_slot), 1298)
+        self.assertEqual(runs_per_slot.count(26), 48)
+        self.assertEqual(runs_per_slot.count(25), 2)
+        self.assertEqual(max(runs_per_slot), 26)
+
     def test_build_reaction_cost_params_uses_form_inputs(self):
         params = build_reaction_cost_params(
             product_id=3,

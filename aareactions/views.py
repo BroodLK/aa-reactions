@@ -54,6 +54,22 @@ from .tasks import update_character_skills, update_character_standings
 
 from eve_sde.models import ItemType as EveType, SolarSystem as EveSolarSystem
 
+
+def split_runs_across_slots(total_runs: int, slots: int) -> List[int]:
+    if slots <= 0:
+        raise ValueError("slots must be positive")
+
+    total_runs = max(int(total_runs or 0), 0)
+    base_runs = total_runs // slots
+    extra_runs = total_runs % slots
+    runs_per_slot = [base_runs + 1 if idx < extra_runs else base_runs for idx in range(slots)]
+
+    if len(runs_per_slot) != slots or sum(runs_per_slot) != total_runs:
+        raise ValueError("slot distribution sanity check failed")
+
+    return runs_per_slot
+
+
 @login_required
 @token_required(scopes=app_settings.AAREACTIONS_CHARACTER_TOKEN_SCOPES)
 def add_character_token(request, token: Token):
@@ -786,9 +802,8 @@ class InputView(View):
             fees_inputs = everef_cost["total_job_cost"] if everef_cost else local_fee_inputs
             step_profit = produced_net - fees_inputs - need_val_sum - stock_val_sum
             cum_profit_next = cum_profit + step_profit
-            step_batches = 0
-            if runs > 0:
-                step_batches = ((int(runs) - 1) // number_of_slots) + 1
+            runs_per_slot = split_runs_across_slots(runs, number_of_slots)
+            step_batches = max(runs_per_slot, default=0)
             step_time_seconds = int(step_batches * plan.get("time_per_run_seconds", 0))
 
             step = {
@@ -797,6 +812,7 @@ class InputView(View):
                 "runs": runs,
                 "number_of_slots": number_of_slots,
                 "time_batches": step_batches,
+                "runs_per_slot_total": sum(runs_per_slot),
                 "inputs": inputs,
                 "product_name": product_name,
                 "produced_qty": produced_qty_display,

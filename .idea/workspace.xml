@@ -18,12 +18,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="487655fb-ea47-4dca-b34e-12f79776cac2" name="Changes" comment="Add `UserReactionSettings` model and integrate user-specific reaction settings into forms, views, and tests">
-      <change beforePath="$PROJECT_DIR$/aareactions/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/forms.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/migrations/0007_userreactionsettings.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/migrations/0007_userreactionsettings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/templates/aareactions/input.html" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/templates/aareactions/input.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/aareactions/templates/aareactions/result.html" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/templates/aareactions/result.html" afterDir="false" />
+    <list default="true" id="487655fb-ea47-4dca-b34e-12f79776cac2" name="Changes" comment="Add `number_of_slots` field to `UserReactionSettings` and integrate into forms, views, and calculations">
       <change beforePath="$PROJECT_DIR$/aareactions/tests/test_basic.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/tests/test_basic.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/aareactions/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/aareactions/views.py" afterDir="false" />
     </list>
@@ -198,7 +193,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780524874872</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="Add `number_of_slots` field to `UserReactionSettings` and integrate into forms, views, and calculations">
+      <option name="closed" value="true" />
+      <created>1780525148313</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1780525148313</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -210,6 +213,7 @@
     <MESSAGE value="Refactor and modularize `aareactions` tasks, pricing, and character handling to improve maintainability and extend functionality." />
     <MESSAGE value="Add EVE Ref pricing integration and advanced reaction cost calculations" />
     <MESSAGE value="Add `UserReactionSettings` model and integrate user-specific reaction settings into forms, views, and tests" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add `UserReactionSettings` model and integrate user-specific reaction settings into forms, views, and tests" />
+    <MESSAGE value="Add `number_of_slots` field to `UserReactionSettings` and integrate into forms, views, and calculations" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add `number_of_slots` field to `UserReactionSettings` and integrate into forms, views, and calculations" />
   </component>
 </project>
