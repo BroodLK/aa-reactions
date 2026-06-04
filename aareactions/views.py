@@ -70,6 +70,98 @@ def split_runs_across_slots(total_runs: int, slots: int) -> List[int]:
     return runs_per_slot
 
 
+def _get_value(obj, key, default=None):
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
+def resolve_reaction_system_index(selected_system_id: int):
+    try:
+        solar_system = EveSolarSystem.objects.select_related("constellation__region").get(id=int(selected_system_id))
+    except (EveSolarSystem.DoesNotExist, TypeError, ValueError):
+        return {
+            "system_name": None,
+            "cost_index_pct": None,
+            "error": "invalid_system",
+        }
+
+    system_name = solar_system.name
+    system_index = SystemIndices.objects.filter(solar_system_id=int(selected_system_id), activity="reactions").first()
+    cached_is_fresh = bool(system_index and (timezone.now() - system_index.last_update).total_seconds() <= 15 * 60)
+    cached_value = Decimal(system_index.cost_index).quantize(Decimal("0.001")) if system_index else None
+
+    if cached_is_fresh:
+        return {
+            "system_name": system_name,
+            "cost_index_pct": cached_value,
+            "source": "cache",
+            "error": None,
+        }
+
+    try:
+        data = get_industry_systems()
+    except Exception:
+        return {
+            "system_name": system_name,
+            "cost_index_pct": cached_value,
+            "source": "cache" if cached_value is not None else None,
+            "error": "esi_unavailable",
+        }
+
+    entry = next(
+        (
+            row
+            for row in (data or [])
+            if int(_get_value(row, "solar_system_id", _get_value(row, "solarSystemID", -1))) == int(selected_system_id)
+        ),
+        None,
+    )
+
+    index_pct = None
+    if entry:
+        try:
+            cost_indices = _get_value(entry, "cost_indices", _get_value(entry, "costIndices", [])) or []
+            index_value = None
+            for cost_index in cost_indices:
+                activity = str(_get_value(cost_index, "activity", "") or "").lower()
+                if activity in {"reaction", "reactions"}:
+                    index_value = _get_value(cost_index, "cost_index", None)
+                    break
+            if index_value is not None:
+                index_pct = (Decimal(str(index_value)) * Decimal("100")).quantize(Decimal("0.001"))
+        except Exception:
+            index_pct = None
+
+    if index_pct is not None:
+        now = timezone.now()
+        if not system_index:
+            SystemIndices.objects.create(
+                solar_system_id=int(selected_system_id),
+                activity="reactions",
+                cost_index=index_pct,
+                last_update=now,
+            )
+        else:
+            system_index.cost_index = index_pct
+            system_index.last_update = now
+            system_index.save(update_fields=["cost_index", "last_update"])
+
+        return {
+            "system_name": system_name,
+            "cost_index_pct": index_pct,
+            "source": "esi",
+            "error": None,
+        }
+
+    return {
+        "system_name": system_name,
+        "cost_index_pct": cached_value,
+        "source": "cache" if cached_value is not None else None,
+        "error": "missing_reaction_index",
+    }
+
+
 @login_required
 @token_required(scopes=app_settings.AAREACTIONS_CHARACTER_TOKEN_SCOPES)
 def add_character_token(request, token: Token):
@@ -116,6 +208,26 @@ def solar_system_search(request):
     )
     data = [{"id": s.id, "text": s.name} for s in qs]
     return JsonResponse(data, safe=False)
+
+
+@login_required
+def solar_system_reaction_index(request):
+    selected_system_id = request.GET.get("solar_system_id")
+    result = resolve_reaction_system_index(selected_system_id)
+
+    return JsonResponse(
+        {
+            "system_name": result.get("system_name"),
+            "cost_index_pct": (
+                f"{result['cost_index_pct']:.3f}" if result.get("cost_index_pct") is not None else None
+            ),
+            "cost_index_display": (
+                f"{result['cost_index_pct']:.3f}%" if result.get("cost_index_pct") is not None else None
+            ),
+            "source": result.get("source"),
+            "error": result.get("error"),
+        }
+    )
 
 @method_decorator(login_required, name="dispatch")
 class InputView(View):
@@ -238,12 +350,6 @@ class InputView(View):
         selected_system_name = None
         selected_reaction_index_pct = None
         if selected_system_id:
-            try:
-                sys = EveSolarSystem.objects.select_related("constellation__region").get(id=int(selected_system_id))
-                selected_system_name = sys.name
-            except EveSolarSystem.DoesNotExist:
-                sys = None
-
             form_override = None
             try:
                 form_ci = Decimal(form.cleaned_data.get("cost_index_pct") or "0")
@@ -252,86 +358,23 @@ class InputView(View):
             except Exception:
                 form_override = None
 
-
-            si = SystemIndices.objects.filter(solar_system_id=int(selected_system_id), activity="reactions").first()
-            cached_is_fresh = bool(si and (timezone.now() - si.last_update).total_seconds() <= 15 * 60)
-            cached_value = Decimal(si.cost_index).quantize(Decimal("0.001")) if si else None
-
             if form_override is not None:
+                selected_system_name = self._selected_system_name(selected_system_id)
                 selected_reaction_index_pct = form_override
                 cost_index_pct = form_override
-            elif cached_is_fresh:
-                selected_reaction_index_pct = cached_value
-                cost_index_pct = cached_value
             else:
-                try:
-                    data = get_industry_systems()
-                except Exception:
-                    data = []
-                    messages.warning(
+                index_result = resolve_reaction_system_index(selected_system_id)
+                selected_system_name = index_result.get("system_name")
+                if index_result.get("cost_index_pct") is not None:
+                    selected_reaction_index_pct = index_result["cost_index_pct"]
+                    cost_index_pct = index_result["cost_index_pct"]
+                elif index_result.get("error") == "esi_unavailable":
+                    messages.warning(request, "Could not contact ESI to fetch Industry cost indices.")
+                elif selected_system_name and index_result.get("error") == "missing_reaction_index":
+                    messages.info(
                         request,
-                        "Could not contact ESI to fetch Industry cost indices."
+                        f"No Industry (Reactions) cost index available for {selected_system_name}. Using default settings value."
                     )
-
-                def _get(obj, key, default=None):
-                    if isinstance(obj, dict):
-                        return obj.get(key, default)
-                    return getattr(obj, key, default)
-
-                entry = next(
-                    (
-                        row for row in (data or [])
-                        if int(_get(row, "solar_system_id", _get(row, "solarSystemID", -1))) == int(selected_system_id)
-                    ),
-                    None
-                )
-
-                idx_pct = None
-                if entry:
-                    try:
-                        cost_indices = _get(entry, "cost_indices", _get(entry, "costIndices", [])) or []
-                        idx = None
-                        for ci in cost_indices:
-                            activity = str(_get(ci, "activity", "") or "").lower()
-                            if activity in {"reaction", "reactions"}:
-                                idx = _get(ci, "cost_index", None)
-                                break
-                        if idx is not None:
-                            idx_pct = (Decimal(str(idx)) * Decimal("100")).quantize(Decimal("0.001"))
-                    except Exception:
-                        idx_pct = None
-
-                if idx_pct is not None:
-                    selected_reaction_index_pct = idx_pct
-                    cost_index_pct = idx_pct
-                    now = timezone.now()
-                    if not si:
-                        SystemIndices.objects.create(
-                            solar_system_id=int(selected_system_id),
-                            activity="reactions",
-                            cost_index=idx_pct,
-                            last_update=now,
-                        )
-                    else:
-                        if (now - si.last_update).total_seconds() > 15 * 60:
-                            si.cost_index = idx_pct
-                            si.last_update = now
-                            si.save(update_fields=["cost_index", "last_update"])
-                else:
-                    # ESI failed or did not provide: fall back to stored model if exists; else keep current (settings/form default)
-                    if cached_value is not None:
-                        selected_reaction_index_pct = cached_value
-                        cost_index_pct = cached_value
-                    else:
-                        # As a last resort, only use form if > 0; otherwise leave as settings default
-                        if form_override is not None:
-                            selected_reaction_index_pct = form_override
-                            cost_index_pct = form_override
-                        elif selected_system_name:
-                            messages.info(
-                                request,
-                                f"No Industry (Reactions) cost index available for {selected_system_name}. Using default settings value."
-                            )
 
         scc_pct = Decimal("4.00")
 

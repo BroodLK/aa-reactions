@@ -16,6 +16,7 @@
               <input id="system_name" type="text" class="form-control" placeholder="Start typing (e.g., Jita, Amarr)..." autocomplete="off" value="{{ selected_system_name|default:'' }}">
               {{ form.solar_system_id }}
               <div class="form-text">Pick a solar system; we'll fetch its Industry (Reactions) cost index from ESI.</div>
+              <div id="system_index_status" class="form-text text-muted"></div>
               <div id="system_results" class="list-group mt-2" style="max-height:220px; overflow:auto; display:none;"></div>
             </div>
 
@@ -132,8 +133,46 @@
   const input = document.getElementById('system_name');
   const list = document.getElementById('system_results');
   const hiddenId = document.getElementById('id_solar_system_id');
+  const costIndex = document.getElementById('id_cost_index_pct');
+  const status = document.getElementById('system_index_status');
 
   let controller = null;
+  let indexController = null;
+
+  async function refreshReactionIndex() {
+    const systemId = hiddenId.value.trim();
+    if (!systemId) {
+      status.textContent = '';
+      return;
+    }
+
+    try {
+      if (indexController) indexController.abort();
+      indexController = new AbortController();
+      status.textContent = 'Updating reaction cost index...';
+      const res = await fetch(`{% url 'aareactions:solar-system-reaction-index' %}?solar_system_id=${encodeURIComponent(systemId)}`, {
+        signal: indexController.signal
+      });
+      if (!res.ok) {
+        status.textContent = 'Could not update the reaction cost index.';
+        return;
+      }
+
+      const data = await res.json();
+      if (data.cost_index_pct) {
+        costIndex.value = data.cost_index_pct;
+        status.textContent = `Reaction cost index: ${data.cost_index_display}`;
+      } else if (data.system_name) {
+        status.textContent = `No reaction cost index available for ${data.system_name}.`;
+      } else {
+        status.textContent = 'Could not update the reaction cost index.';
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      status.textContent = 'Could not update the reaction cost index.';
+    }
+  }
+
   function render(items) {
     list.innerHTML = '';
     if (!items.length) { list.style.display = 'none'; return; }
@@ -147,6 +186,7 @@
         input.value = it.text;
         hiddenId.value = it.id;
         list.style.display = 'none';
+        refreshReactionIndex();
       });
       list.appendChild(a);
     });
@@ -156,6 +196,7 @@
   input.addEventListener('input', async () => {
     const q = input.value.trim();
     hiddenId.value = '';
+    status.textContent = '';
     if (q.length < 2) { list.style.display = 'none'; return; }
     try {
       if (controller) controller.abort();
@@ -166,6 +207,10 @@
       render(data || []);
     } catch(e) { /* ignore */ }
   });
+
+  if (hiddenId.value) {
+    refreshReactionIndex();
+  }
 })();
 </script>
 {% endblock %}

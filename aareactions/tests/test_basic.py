@@ -8,9 +8,9 @@ from django.test import RequestFactory, TestCase
 from eve_sde.models import ItemType
 
 from aareactions.helper import effective_time_seconds, te_bonus_pct
-from aareactions.models import Reaction, ReactionSettings, UserReactionSettings
+from aareactions.models import Reaction, ReactionSettings, SystemIndices, UserReactionSettings
 from aareactions.providers import build_reaction_cost_params, default_reaction_structure_type_id, parse_reaction_rig_ids
-from aareactions.views import InputView, split_runs_across_slots
+from aareactions.views import InputView, solar_system_reaction_index, split_runs_across_slots
 
 
 class InputViewStepDisplayTests(TestCase):
@@ -397,3 +397,39 @@ class EveRefProviderTests(TestCase):
 
     def test_parse_reaction_rig_ids_filters_invalid_values(self):
         self.assertEqual(parse_reaction_rig_ids("37180, bad, 37180,\n37183"), [37180, 37183])
+
+
+class SolarSystemReactionIndexTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(
+            username="indexer",
+            email="indexer@example.com",
+            password="password",
+        )
+
+    def test_endpoint_returns_cached_reaction_index(self):
+        SystemIndices.objects.create(
+            solar_system_id=30000142,
+            activity="reactions",
+            cost_index=Decimal("0.321"),
+        )
+
+        request = self.factory.get("/aareactions/systems/reaction-index/?solar_system_id=30000142")
+        request.user = self.user
+
+        with patch("aareactions.views.EveSolarSystem.objects.select_related") as mock_select:
+            mock_select.return_value.get.return_value.name = "Jita"
+            response = solar_system_reaction_index(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertJSONEqual(
+            response.content,
+            {
+                "system_name": "Jita",
+                "cost_index_pct": "0.321",
+                "cost_index_display": "0.321%",
+                "source": "cache",
+                "error": None,
+            },
+        )
