@@ -1,9 +1,15 @@
+# Standard Library
 import json
-from django.core.management.base import BaseCommand, CommandError
-from eve_sde.models import ItemType as EveType
-from django.db import transaction
 from pathlib import Path
 from typing import List
+
+# Django
+from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
+
+# Alliance Auth (External Libs)
+from eve_sde.models import ItemType as EveType
+
 from ...models import Reaction, ReactionMaterial, ReactionProduct
 
 
@@ -47,17 +53,18 @@ class Command(BaseCommand):
                     self.stderr.write(f"Line {idx}: Missing blueprintTypeID")
                     continue
 
-                needed_type_ids: List[int] = [bp_id] + [int(m["typeID"]) for m in mats if "typeID" in m] + [
-                    int(p["typeID"]) for p in prods if "typeID" in p
-                ]
+                needed_type_ids: List[int] = (
+                    [bp_id]
+                    + [int(m["typeID"]) for m in mats if "typeID" in m]
+                    + [int(p["typeID"]) for p in prods if "typeID" in p]
+                )
                 EveType.objects.in_bulk(needed_type_ids)
 
                 reaction, _ = Reaction.objects.update_or_create(
                     blueprint_type_id=bp_id, defaults={"time_seconds": time_sec}
                 )
                 reaction.name = (
-                    EveType.objects.filter(id=bp_id).values_list("name", flat=True).first()
-                    or reaction.name
+                    EveType.objects.filter(id=bp_id).values_list("name", flat=True).first() or reaction.name
                 )
                 reaction.save()
 

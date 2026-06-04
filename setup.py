@@ -1,4 +1,7 @@
+# Standard Library
 import re
+
+# Third Party
 from setuptools import setup
 
 with open("aareactions/__init__.py", "r", encoding="utf-8") as f:

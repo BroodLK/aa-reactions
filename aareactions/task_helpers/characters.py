@@ -1,16 +1,16 @@
 # Standard Library
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-
-# Third Party
-from allianceauth.services.hooks import get_extension_logger
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 # Django
 from django.db import transaction
 from django.utils import timezone
 
+# Alliance Auth
+from allianceauth.services.hooks import get_extension_logger
+
+# aa-reactions
 # aareactions
 from aareactions.models import CharacterReactions, CharacterStandings, CharacterToken
-
 
 logger = get_extension_logger(__name__)
 
@@ -76,15 +76,11 @@ def update_character_skills_record(character_id, data):
         reactions.broker_relations_skill_level = skill_map.get(BROKER_RELATIONS_SKILL_ID, 0)
         reactions.reprocessing_level = skill_map.get(REPROCESSING_SKILL_ID, 0)
         reactions.reprocessing_efficiency = skill_map.get(REPROCESSING_EFFICIENCY_SKILL_ID, 0)
-        reactions.ubiquitous_moon_processing_level = skill_map.get(
-            UBIQUITOUS_MOON_PROCESSING_SKILL_ID, 0
-        )
+        reactions.ubiquitous_moon_processing_level = skill_map.get(UBIQUITOUS_MOON_PROCESSING_SKILL_ID, 0)
         reactions.common_moon_processing_level = skill_map.get(COMMON_MOON_PROCESSING_SKILL_ID, 0)
         reactions.uncommon_moon_processing_level = skill_map.get(UNCOMMON_MOON_PROCESSING_SKILL_ID, 0)
         reactions.rare_moon_processing_level = skill_map.get(RARE_MOON_PROCESSING_SKILL_ID, 0)
-        reactions.exceptional_moon_processing_level = skill_map.get(
-            EXCEPTIONAL_MOON_PROCESSING_SKILL_ID, 0
-        )
+        reactions.exceptional_moon_processing_level = skill_map.get(EXCEPTIONAL_MOON_PROCESSING_SKILL_ID, 0)
         reactions.scrap_metal_processing_level = skill_map.get(SCRAP_METAL_PROCESSING_SKILL_ID, 0)
         reactions.last_update = timezone.now()
         reactions.save(

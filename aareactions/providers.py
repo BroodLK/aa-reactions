@@ -2,18 +2,18 @@
 from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Optional, Tuple
 
+# Third Party
+import requests
+
 # Alliance Auth
 from allianceauth.services.hooks import get_extension_logger
 from esi.models import Token
 from esi.openapi_clients import ESIClientProvider
 
-# Third Party
-import requests
-
+# aa-reactions
 # aareactions
 from aareactions import __url__, __version__, app_settings
 from aareactions.apps import ReactionsConfig
-
 
 logger = get_extension_logger(__name__)
 

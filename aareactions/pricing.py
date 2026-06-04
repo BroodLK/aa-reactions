@@ -3,16 +3,18 @@ from decimal import Decimal
 from functools import lru_cache
 
 # Third Party
-from allianceauth.services.hooks import get_extension_logger
 import requests
 
 # Django
 from django.utils import timezone
 
+# Alliance Auth
+from allianceauth.services.hooks import get_extension_logger
+
+# aa-reactions
 # aareactions
 from aareactions import app_settings
 from aareactions.models import EveTypePrice
-
 
 logger = get_extension_logger(__name__)
 

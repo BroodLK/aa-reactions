@@ -1,19 +1,29 @@
 # file: aareactions/helper.py
 from __future__ import annotations
-from dataclasses import dataclass
-from decimal import Decimal, ROUND_DOWN, ROUND_HALF_UP
-from math import ceil
-from typing import Dict, Iterable, List, Tuple, Any
+
+# Standard Library
 import re
+from dataclasses import dataclass
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
+from math import ceil
+from typing import Any, Dict, Iterable, List, Tuple
+
+# Django
 from django.db.models import Sum
-from eve_sde.models import ItemType as EveType, ItemTypeMaterials as EveTypeMaterial
+
+# Alliance Auth (External Libs)
+from eve_sde.models import ItemType as EveType
+from eve_sde.models import ItemTypeMaterials as EveTypeMaterial
+
 from .models import Reaction, ReactionSettings
 from .pricing import resolve_price_value
+
 
 @dataclass(frozen=True)
 class ParsedLine:
     evetype: EveType
     quantity: int
+
 
 @dataclass(frozen=True)
 class ParsedItem:
@@ -21,7 +31,9 @@ class ParsedItem:
     quantity: int
     category: str
 
+
 LOCATION_MULT = {"low": Decimal("1.0"), "null": Decimal("1.1"), "wh": Decimal("1.1")}
+
 
 def _parse_number_token(tok: str) -> int:
     s = tok.strip().replace(",", "").replace("_", "").lower()
@@ -44,11 +56,13 @@ def _parse_number_token(tok: str) -> int:
         mult = 1_000_000_000
     return int(num * mult)
 
+
 def _clean_name_fragment(s: str) -> str:
     s = s.strip().strip('"').strip("'")
     s = re.sub(r"\s+", " ", s)
     s = re.sub(r"\s*[:|,-]\s*$", "", s)
     return s
+
 
 def parse_input_lines(raw: str) -> List[Tuple[str, int]]:
     if not raw:
@@ -120,11 +134,14 @@ def parse_input_lines(raw: str) -> List[Tuple[str, int]]:
 
     return [(name, qty) for name, qty in agg.items()]
 
+
 def _get_evetype(item: Any) -> EveType:
     return item.evetype if hasattr(item, "evetype") else item[0]
 
+
 def _get_qty(item: Any) -> int:
     return item.quantity if hasattr(item, "quantity") else int(item[1])
+
 
 def sales_tax_pct(accounting_level: int) -> Decimal:
     base = Decimal("7.5")
@@ -132,6 +149,7 @@ def sales_tax_pct(accounting_level: int) -> Decimal:
     if reduction > Decimal("1"):
         reduction = Decimal("1")
     return (base * (Decimal("1") - reduction)).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+
 
 def me_bonus_pct(rig_me: str, location: str) -> Decimal:
     base = Decimal("0")
@@ -141,6 +159,7 @@ def me_bonus_pct(rig_me: str, location: str) -> Decimal:
         base = Decimal("2.4")
     return (base * LOCATION_MULT.get(location, Decimal("1.0"))).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
 
+
 def te_bonus_pct(rig_te: str, location: str) -> Decimal:
     base = Decimal("0")
     if rig_te == "t1":
@@ -149,17 +168,20 @@ def te_bonus_pct(rig_te: str, location: str) -> Decimal:
         base = Decimal("24.0")
     return (base * LOCATION_MULT.get(location, Decimal("1.0"))).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
 
+
 def size_time_bonus_pct(size: str) -> Decimal:
     if size == "large":
         return Decimal("25.0")
     return Decimal("20.0")
 
+
 def effective_time_seconds(base: int, skill_level: int, size: str, te_pct: Decimal) -> int:
     skill_red = Decimal("0.04") * Decimal(skill_level)
-    size_red = (size_time_bonus_pct(size) / Decimal("100"))
-    te_red = (te_pct / Decimal("100"))
+    size_red = size_time_bonus_pct(size) / Decimal("100")
+    te_red = te_pct / Decimal("100")
     t = Decimal(base) * (Decimal("1") - skill_red) * (Decimal("1") - size_red) * (Decimal("1") - te_red)
     return int(t.to_integral_value(rounding=ROUND_HALF_UP))
+
 
 def apply_me_to_requirements(per_run_requirements: Dict[int, int], me_pct: Decimal) -> Dict[int, int]:
     eff = (Decimal("100") - me_pct) / Decimal("100")
@@ -167,6 +189,7 @@ def apply_me_to_requirements(per_run_requirements: Dict[int, int], me_pct: Decim
     for tid, base_q in per_run_requirements.items():
         out[int(tid)] = int(ceil(Decimal(base_q) * eff))
     return out
+
 
 def resolve_types(pairs: Iterable[Tuple[str, int]]) -> List[ParsedLine]:
     by_name: Dict[str, int] = {}
@@ -184,9 +207,7 @@ def resolve_types(pairs: Iterable[Tuple[str, int]]) -> List[ParsedLine]:
     qs_name = EveType.objects.filter(name__in=list(by_name.keys())).only(
         "id", "name", "group_id", "portion_size", "volume"
     )
-    qs_id = EveType.objects.filter(id__in=list(by_id.keys())).only(
-        "id", "name", "group_id", "portion_size", "volume"
-    )
+    qs_id = EveType.objects.filter(id__in=list(by_id.keys())).only("id", "name", "group_id", "portion_size", "volume")
     out = []
     matched_names = set()
     for et in qs_name:
@@ -196,16 +217,16 @@ def resolve_types(pairs: Iterable[Tuple[str, int]]) -> List[ParsedLine]:
     # Try case-insensitive match for unmatched names
     unmatched = {k: v for k, v in by_name.items() if k not in matched_names}
     if unmatched:
+        # Django
         from django.db.models import Q
+
         name_lower_map = {k.lower(): (k, v) for k, v in unmatched.items()}
         # Build Q objects for case-insensitive OR query
         q_objects = Q()
         for name in unmatched.keys():
             q_objects |= Q(name__iexact=name)
         if q_objects:
-            qs_iname = EveType.objects.filter(q_objects).only(
-                "id", "name", "group_id", "portion_size", "volume"
-            )
+            qs_iname = EveType.objects.filter(q_objects).only("id", "name", "group_id", "portion_size", "volume")
             for et in qs_iname:
                 input_name_lower = et.name.lower()
                 if input_name_lower in name_lower_map:
@@ -215,6 +236,7 @@ def resolve_types(pairs: Iterable[Tuple[str, int]]) -> List[ParsedLine]:
     for et in qs_id:
         out.append(ParsedLine(evetype=et, quantity=by_id.get(et.id, 0)))
     return out
+
 
 def categorize_items(items: List[ParsedLine]) -> List[ParsedItem]:
     ids = [p.evetype.id for p in items]
@@ -235,11 +257,14 @@ def categorize_items(items: List[ParsedLine]) -> List[ParsedItem]:
             out.append(ParsedItem(p.evetype, p.quantity, "material"))
     return out
 
+
 def filter_by_settings(items: List[ParsedItem], settings: ReactionSettings) -> List[ParsedItem]:
     return items
 
+
 def _is_unrefined_name(name: str) -> bool:
     return bool(name) and name.lower().startswith("unrefined ")
+
 
 def refine_from_inputs(
     items: List[ParsedItem],
@@ -275,6 +300,7 @@ def refine_from_inputs(
     rows: List[Tuple[int, int]] = [(tid, qty) for tid, qty in refined.items()]
     return refined, rows
 
+
 def build_initial_stock(
     items: List[ParsedItem],
     refine_rate: Decimal,
@@ -289,11 +315,14 @@ def build_initial_stock(
             stock[p.evetype.id] = stock.get(p.evetype.id, 0) + int(p.quantity)
     return stock, refined_rows
 
+
 def plan_reactions_once(stock: Dict[int, int]) -> Tuple[List[dict], Dict[int, int]]:
     plans: List[dict] = []
     remaining = dict(stock)
-    reactions = Reaction.objects.all().prefetch_related("materials__type", "products__type").only(
-        "id", "name", "blueprint_type_id", "time_seconds"
+    reactions = (
+        Reaction.objects.all()
+        .prefetch_related("materials__type", "products__type")
+        .only("id", "name", "blueprint_type_id", "time_seconds")
     )
     for rx in reactions:
         reqs: Dict[int, int] = {}
@@ -356,9 +385,11 @@ def plan_reactions_once(stock: Dict[int, int]) -> Tuple[List[dict], Dict[int, in
         )
     return plans, remaining
 
+
 def plan_reactions_with_chain(stock: Dict[int, int]) -> List[dict]:
     plans, _ = plan_reactions_once(stock)
     return plans
+
 
 def fmt_duration(seconds: int) -> str:
     s = int(max(0, seconds))
@@ -376,15 +407,17 @@ def fmt_duration(seconds: int) -> str:
         parts.append(f"{s}s")
     return " ".join(parts)
 
+
 def is_fuel_id(type_map: Dict[int, EveType], tid: int) -> bool:
     et = type_map.get(int(tid))
     return bool(et and "fuel block" in (et.name or "").lower())
+
 
 def refined_partner_type_id(type_map: Dict[int, EveType], unrefined_tid: int) -> int | None:
     et = type_map.get(int(unrefined_tid))
     if not et or not _is_unrefined_name(et.name or ""):
         return None
-    ref_name = (et.name or "")[len("Unrefined "):]
+    ref_name = (et.name or "")[len("Unrefined ") :]
     for t in type_map.values():
         if (t.name or "") == ref_name:
             return int(t.id)
@@ -395,12 +428,14 @@ def refined_partner_type_id(type_map: Dict[int, EveType], unrefined_tid: int) ->
     except EveType.DoesNotExist:
         return None
 
+
 def has_refined_already(plan: dict, stock_map: Dict[int, int], type_map: Dict[int, EveType]) -> bool:
     for tid in (plan.get("per_run_products") or {}).keys():
         rid = refined_partner_type_id(type_map, int(tid))
         if rid is not None and int(stock_map.get(rid, 0)) > 0:
             return True
     return False
+
 
 def runcap_with_present(stock_map: Dict[int, int], reqs: Dict[int, int], type_map: Dict[int, EveType]) -> int:
     caps = []
@@ -418,6 +453,7 @@ def runcap_with_present(stock_map: Dict[int, int], reqs: Dict[int, int], type_ma
         return 0
     return int(min(caps) if caps else 0)
 
+
 def runcap_with_supply(
     stock_map: Dict[int, int],
     reqs: Dict[int, int],
@@ -432,11 +468,13 @@ def runcap_with_supply(
             merged[int(k)] = int(merged.get(int(k), 0)) + int(v)
     return runcap_with_present(merged, reqs, type_map)
 
+
 def price_input(tid: int, price_basis: str) -> Decimal:
     try:
         return resolve_price_value(int(tid), price_basis) or Decimal("0")
     except Exception:
         return Decimal("0")
+
 
 def price_output(tid: int, price_basis: str) -> Decimal:
     try:
@@ -444,10 +482,12 @@ def price_output(tid: int, price_basis: str) -> Decimal:
     except Exception:
         return Decimal("0")
 
+
 def add_supply(dst: Dict[int, int], src: Dict[int, int]) -> None:
     for k, v in (src or {}).items():
         if v:
             dst[int(k)] = int(dst.get(int(k), 0)) + int(v)
+
 
 def find_feeders_for_parent(
     parent_plan: dict,
@@ -467,6 +507,7 @@ def find_feeders_for_parent(
     feeders.sort(key=lambda x: (-x[0], x[1]["name"]))
     return [c for _, c in feeders[:max_count]]
 
+
 def reprocess_unrefined_in_stock(
     produced: Dict[int, int],
     refine_rate: Decimal,
@@ -481,8 +522,7 @@ def reprocess_unrefined_in_stock(
     if not unref_ids:
         return {}, {}
     mats = (
-        EveTypeMaterial.objects
-        .filter(item_type_id__in=unref_ids)
+        EveTypeMaterial.objects.filter(item_type_id__in=unref_ids)
         .values("item_type_id", "material_item_type_id")
         .annotate(total=Sum("quantity"))
     )
@@ -635,12 +675,15 @@ def self_recovery_loss(plan: dict, refine_rate: Decimal, type_map: Dict[int, Eve
     per_run_prods = {int(k): int(v) for k, v in (plan.get("per_run_products") or {}).items()}
     if not per_run_prods or not per_run_reqs:
         return 0
-    unref_tids = [int(t) for t in per_run_prods.keys() if (type_map.get(int(t)) and _is_unrefined_name(type_map[int(t)].name or ""))]
+    unref_tids = [
+        int(t)
+        for t in per_run_prods.keys()
+        if (type_map.get(int(t)) and _is_unrefined_name(type_map[int(t)].name or ""))
+    ]
     if not unref_tids:
         return 0
     mats = (
-        EveTypeMaterial.objects
-        .filter(item_type_id__in=unref_tids)
+        EveTypeMaterial.objects.filter(item_type_id__in=unref_tids)
         .values("item_type_id", "material_item_type_id")
         .annotate(total=Sum("quantity"))
     )

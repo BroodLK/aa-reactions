@@ -1,14 +1,20 @@
+# Standard Library
 from decimal import Decimal
 from typing import ClassVar
 
+# Django
 from django.conf import settings
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from eve_sde.models import ItemType as EveType
+# Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
 from esi.models import Token
+
+# Alliance Auth (External Libs)
+from eve_sde.models import ItemType as EveType
+
 
 class General(models.Model):
     class Meta:
@@ -16,8 +22,9 @@ class General(models.Model):
         default_permissions = ()
         permissions = (
             ("basic_access", "Can access reactions app"),
-            ("reactions_admin", "Can manage default reaction setting")
+            ("reactions_admin", "Can manage default reaction setting"),
         )
+
 
 class ContactTokenQueryset(models.QuerySet):
     def with_valid_tokens(self):
@@ -34,7 +41,7 @@ class ReactionTokenManager(models.Manager):
 
 
 class ReactionToken(models.Model):
-    token = models.ForeignKey(Token, on_delete=models.CASCADE, related_name='+')
+    token = models.ForeignKey(Token, on_delete=models.CASCADE, related_name="+")
     last_update = models.DateTimeField(default=timezone.now)
     objects: ClassVar[ReactionTokenManager] = ReactionTokenManager()
 
@@ -44,7 +51,7 @@ class ReactionToken(models.Model):
 
 
 class CharacterToken(ReactionToken):
-    character = models.OneToOneField(EveCharacter, on_delete=models.CASCADE, related_name='+')
+    character = models.OneToOneField(EveCharacter, on_delete=models.CASCADE, related_name="+")
 
     class Meta:
         default_permissions = ()
@@ -58,27 +65,52 @@ class CharacterToken(ReactionToken):
             return cls.objects.all()
         return cls.objects.none()
 
+
 class CharacterReactions(models.Model):
-    character = models.ForeignKey(CharacterToken, on_delete=models.CASCADE, related_name='+')
-    reaction_skill_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    broker_relations_skill_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    scrap_metal_processing_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    accounting_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    reprocessing_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    reprocessing_efficiency = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    ubiquitous_moon_processing_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    common_moon_processing_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    uncommon_moon_processing_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    rare_moon_processing_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    exceptional_moon_processing_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    character = models.ForeignKey(CharacterToken, on_delete=models.CASCADE, related_name="+")
+    reaction_skill_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    broker_relations_skill_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    scrap_metal_processing_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    accounting_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    reprocessing_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    reprocessing_efficiency = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    ubiquitous_moon_processing_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    common_moon_processing_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    uncommon_moon_processing_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    rare_moon_processing_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    exceptional_moon_processing_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
     last_update = models.DateTimeField(default=timezone.now)
 
+
 class CharacterStandings(models.Model):
-    character = models.ForeignKey(CharacterToken, on_delete=models.CASCADE, related_name='+')
+    character = models.ForeignKey(CharacterToken, on_delete=models.CASCADE, related_name="+")
     standing = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
     entity_id = models.BigIntegerField(default=0)
     entity_type = models.CharField(max_length=100, default="")
     last_update = models.DateTimeField(default=timezone.now)
+
 
 class SystemIndices(models.Model):
     solar_system_id = models.IntegerField(db_index=True, unique=True)
@@ -86,45 +118,10 @@ class SystemIndices(models.Model):
     cost_index = models.DecimalField(max_digits=6, decimal_places=3)
     last_update = models.DateTimeField(default=timezone.now)
 
+
 class ReactionSettings(models.Model):
     name = models.CharField(max_length=100, default="Default")
     allowed_group_ids = models.JSONField(default=list)
-    refine_rate = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("80.00"))
-    input_price_basis = models.CharField(max_length=8, choices=(("buy", "Buy"), ("sell", "Sell")), default="buy")
-    output_price_basis = models.CharField(max_length=8, choices=(("buy", "Buy"), ("sell", "Sell")), default="sell")
-    broker_fee_pct = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("3.00"), validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))])
-    accounting_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    reaction_skill_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    facility_size = models.CharField(max_length=8, choices=(("medium", "Medium"), ("large", "Large")), default="medium")
-    facility_location = models.CharField(max_length=8, choices=(("low", "Low"), ("null", "Null"), ("wh", "WH")), default="low")
-    rig_me = models.CharField(max_length=8, choices=(("none", "None"), ("t1", "T1 ME"), ("t2", "T2 ME")), default="none")
-    rig_te = models.CharField(max_length=8, choices=(("none", "None"), ("t1", "T1 TE"), ("t2", "T2 TE")), default="none")
-    repro_rig_me = models.CharField(max_length=8, choices=(("none", "None"), ("t1", "T1"), ("t2", "T2")), default="none")
-    facility_tax_pct = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("1.50"), validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))])
-    cost_index_pct = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal("0.150"), validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))])
-    scrap_metal_processing_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    refine_implant = models.PositiveSmallIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(4)])
-
-    buyback_enabled = models.BooleanField(default=False)
-    buyback_pct = models.DecimalField(
-        max_digits=6,
-        decimal_places=2,
-        default=Decimal("90.00"),
-        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
-    )
-    buyback_basis = models.CharField(
-        max_length=8, choices=(("buy", "Buy"), ("sell", "Sell")), default="buy"
-    )
-
-    verbose_name = "Reaction Settings"
-    verbose_name_plural = "Reaction Settings"
-
-    def __str__(self) -> str:
-        return self.name
-
-
-class UserReactionSettings(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="aareactions_settings")
     refine_rate = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("80.00"))
     input_price_basis = models.CharField(max_length=8, choices=(("buy", "Buy"), ("sell", "Sell")), default="buy")
     output_price_basis = models.CharField(max_length=8, choices=(("buy", "Buy"), ("sell", "Sell")), default="sell")
@@ -134,13 +131,27 @@ class UserReactionSettings(models.Model):
         default=Decimal("3.00"),
         validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
     )
-    accounting_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    reaction_skill_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
-    number_of_slots = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
-    facility_size = models.CharField(max_length=8, choices=(("medium", "Medium"), ("large", "Large")), default="medium")
-    facility_location = models.CharField(max_length=8, choices=(("low", "Low"), ("null", "Null"), ("wh", "WH")), default="low")
-    rig_me = models.CharField(max_length=8, choices=(("none", "None"), ("t1", "T1 ME"), ("t2", "T2 ME")), default="none")
-    rig_te = models.CharField(max_length=8, choices=(("none", "None"), ("t1", "T1 TE"), ("t2", "T2 TE")), default="none")
+    accounting_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    reaction_skill_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    facility_size = models.CharField(
+        max_length=8, choices=(("medium", "Medium"), ("large", "Large")), default="medium"
+    )
+    facility_location = models.CharField(
+        max_length=8, choices=(("low", "Low"), ("null", "Null"), ("wh", "WH")), default="low"
+    )
+    rig_me = models.CharField(
+        max_length=8, choices=(("none", "None"), ("t1", "T1 ME"), ("t2", "T2 ME")), default="none"
+    )
+    rig_te = models.CharField(
+        max_length=8, choices=(("none", "None"), ("t1", "T1 TE"), ("t2", "T2 TE")), default="none"
+    )
+    repro_rig_me = models.CharField(
+        max_length=8, choices=(("none", "None"), ("t1", "T1"), ("t2", "T2")), default="none"
+    )
     facility_tax_pct = models.DecimalField(
         max_digits=6,
         decimal_places=2,
@@ -153,11 +164,82 @@ class UserReactionSettings(models.Model):
         default=Decimal("0.150"),
         validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
     )
-    scrap_metal_processing_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    scrap_metal_processing_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    refine_implant = models.PositiveSmallIntegerField(
+        default=0, validators=[MinValueValidator(0), MaxValueValidator(4)]
+    )
+
+    buyback_enabled = models.BooleanField(default=False)
+    buyback_pct = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal("90.00"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+    )
+    buyback_basis = models.CharField(max_length=8, choices=(("buy", "Buy"), ("sell", "Sell")), default="buy")
+
+    verbose_name = "Reaction Settings"
+    verbose_name_plural = "Reaction Settings"
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class UserReactionSettings(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="aareactions_settings"
+    )
+    refine_rate = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("80.00"))
+    input_price_basis = models.CharField(max_length=8, choices=(("buy", "Buy"), ("sell", "Sell")), default="buy")
+    output_price_basis = models.CharField(max_length=8, choices=(("buy", "Buy"), ("sell", "Sell")), default="sell")
+    broker_fee_pct = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal("3.00"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+    )
+    accounting_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    reaction_skill_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+    number_of_slots = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+    facility_size = models.CharField(
+        max_length=8, choices=(("medium", "Medium"), ("large", "Large")), default="medium"
+    )
+    facility_location = models.CharField(
+        max_length=8, choices=(("low", "Low"), ("null", "Null"), ("wh", "WH")), default="low"
+    )
+    rig_me = models.CharField(
+        max_length=8, choices=(("none", "None"), ("t1", "T1 ME"), ("t2", "T2 ME")), default="none"
+    )
+    rig_te = models.CharField(
+        max_length=8, choices=(("none", "None"), ("t1", "T1 TE"), ("t2", "T2 TE")), default="none"
+    )
+    facility_tax_pct = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal("1.50"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+    )
+    cost_index_pct = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        default=Decimal("0.150"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+    )
+    scrap_metal_processing_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
     solar_system_id = models.IntegerField(blank=True, null=True)
     everef_structure_type_id = models.IntegerField(blank=True, null=True)
     everef_rig_ids = models.CharField(max_length=255, blank=True, default="")
-    advanced_industry_level = models.PositiveSmallIntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(5)])
+    advanced_industry_level = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
     system_cost_bonus_pct = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal("0.00"))
     everef_material_prices = models.CharField(max_length=64, blank=True, default="")
     alpha_clone = models.BooleanField(default=False)

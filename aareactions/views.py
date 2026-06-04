@@ -1,20 +1,26 @@
+# Standard Library
 from decimal import Decimal
 from typing import Dict, List
 
+# Django
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
-from django.utils.decorators import method_decorator
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.utils.translation import gettext
 from django.views import View
 
+# Alliance Auth
 from allianceauth.eveonline.models import EveCharacter
-
 from esi.decorators import token_required
 from esi.models import Token
+
+# Alliance Auth (External Libs)
+from eve_sde.models import ItemType as EveType
+from eve_sde.models import SolarSystem as EveSolarSystem
 
 from . import app_settings
 from .forms import InputForm
@@ -33,14 +39,13 @@ from .helper import (
     has_refined_already,
     is_fuel_id,
     me_bonus_pct,
-    resolve_types,
     parse_input_lines,
     plan_reactions_with_chain,
     price_input,
     price_output,
     produces_unrefined,
     reprocess_unrefined_in_stock,
-    refined_partner_type_id,
+    resolve_types,
     runcap_with_present,
     runcap_with_supply,
     sales_tax_pct,
@@ -49,10 +54,13 @@ from .helper import (
 )
 from .models import CharacterToken, Reaction, ReactionSettings, SystemIndices, UserReactionSettings
 from .pricing import resolve_price_value
-from .providers import default_reaction_structure_type_id, get_industry_systems, get_reaction_cost, parse_reaction_rig_ids
+from .providers import (
+    default_reaction_structure_type_id,
+    get_industry_systems,
+    get_reaction_cost,
+    parse_reaction_rig_ids,
+)
 from .tasks import update_character_skills, update_character_standings
-
-from eve_sde.models import ItemType as EveType, SolarSystem as EveSolarSystem
 
 
 def split_runs_across_slots(total_runs: int, slots: int) -> List[int]:
@@ -167,34 +175,31 @@ def resolve_reaction_system_index(selected_system_id: int):
 def add_character_token(request, token: Token):
 
     if CharacterToken.objects.filter(character_id=token.character_id).exists():
-        messages.error(request, gettext('Character reaction skills already being tracked.'))
-        return redirect('aareactions:index')
+        messages.error(request, gettext("Character reaction skills already being tracked."))
+        return redirect("aareactions:index")
 
     eve_char, _ = EveCharacter.objects.get_or_create(
         character_id=token.character_id,
-        defaults={"character_name": getattr(token, "character_name", str(token.character_id))}
+        defaults={"character_name": getattr(token, "character_name", str(token.character_id))},
     )
 
     try:
         with transaction.atomic():
-            ct, created = CharacterToken.objects.get_or_create(
-                character=eve_char,
-                defaults={"token": token}
-            )
+            ct, created = CharacterToken.objects.get_or_create(character=eve_char, defaults={"token": token})
             if not created:
                 if ct.token_id != token.id:
                     ct.token = token
                     ct.save(update_fields=["token", "last_update"])
     except IntegrityError:
         messages.info(request, gettext("Character reaction skills already being tracked."))
-        return redirect('aareactions:index')
-
+        return redirect("aareactions:index")
 
     update_character_skills.apply_async(kwargs={"character_id": token.character_id})
     update_character_standings.apply_async(kwargs={"character_id": token.character_id})
 
-    messages.success(request, gettext('Reaction skills and standings are now being tracked.'))
-    return redirect('aareactions:index')
+    messages.success(request, gettext("Reaction skills and standings are now being tracked."))
+    return redirect("aareactions:index")
+
 
 @login_required
 def solar_system_search(request):
@@ -228,6 +233,7 @@ def solar_system_reaction_index(request):
             "error": result.get("error"),
         }
     )
+
 
 @method_decorator(login_required, name="dispatch")
 class InputView(View):
@@ -299,12 +305,13 @@ class InputView(View):
             messages.error(request, "Settings not configured.")
             return render(request, self.template_name, {"form": form, "settings": None, "selected_system_name": None})
         if not form.is_valid():
-            return render(request, self.template_name, {"form": form, "settings": settings, "selected_system_name": None})
+            return render(
+                request, self.template_name, {"form": form, "settings": settings, "selected_system_name": None}
+            )
 
         if Reaction.objects.count() == 0:
             messages.warning(
-                request,
-                "No reactions found in database. Did you run the 'import_reactions' management command?"
+                request, "No reactions found in database. Did you run the 'import_reactions' management command?"
             )
 
         refine_rate_pct = Decimal(form.cleaned_data.get("refine_rate") or settings.refine_rate)
@@ -313,9 +320,7 @@ class InputView(View):
         refine_rate = refine_rate_pct / Decimal("100")
 
         smp_level = int(
-            form.cleaned_data.get(
-                "scrap_metal_processing_level", getattr(settings, "scrap_metal_processing_level", 0)
-            )
+            form.cleaned_data.get("scrap_metal_processing_level", getattr(settings, "scrap_metal_processing_level", 0))
             or 0
         )
         smp_rate_pct = (Decimal("50") * (Decimal("1.0") + Decimal(smp_level) * Decimal("0.02"))).quantize(
@@ -337,9 +342,9 @@ class InputView(View):
         rig_te = form.cleaned_data.get("rig_te") or settings.rig_te
         facility_tax_pct = Decimal(form.cleaned_data.get("facility_tax_pct") or settings.facility_tax_pct)
         cost_index_pct = Decimal(form.cleaned_data.get("cost_index_pct") or settings.cost_index_pct)
-        everef_structure_type_id = form.cleaned_data.get("everef_structure_type_id") or default_reaction_structure_type_id(
-            facility_size
-        )
+        everef_structure_type_id = form.cleaned_data.get(
+            "everef_structure_type_id"
+        ) or default_reaction_structure_type_id(facility_size)
         everef_rig_ids = parse_reaction_rig_ids(form.cleaned_data.get("everef_rig_ids"))
         advanced_industry_level = int(form.cleaned_data.get("advanced_industry_level") or 5)
         system_cost_bonus_pct = Decimal(form.cleaned_data.get("system_cost_bonus_pct") or Decimal("0"))
@@ -373,7 +378,7 @@ class InputView(View):
                 elif selected_system_name and index_result.get("error") == "missing_reaction_index":
                     messages.info(
                         request,
-                        f"No Industry (Reactions) cost index available for {selected_system_name}. Using default settings value."
+                        f"No Industry (Reactions) cost index available for {selected_system_name}. Using default settings value.",
                     )
 
         scc_pct = Decimal("4.00")
@@ -473,8 +478,7 @@ class InputView(View):
             type_ids.update((p.get("per_run_requirements") or {}).keys())
             type_ids.update((p.get("per_run_products") or {}).keys())
         type_map = {
-            t.id: t
-            for t in EveType.objects.filter(id__in=list(type_ids)).only("id", "name", "volume", "portion_size")
+            t.id: t for t in EveType.objects.filter(id__in=list(type_ids)).only("id", "name", "volume", "portion_size")
         }
 
         unrefinables = []
@@ -592,7 +596,11 @@ class InputView(View):
 
         for p in plans_raw:
             rx = p.get("reaction")
-            name = (rx.name if rx and getattr(rx, "name", None) else None) or p.get("name") or f"Reaction {getattr(rx, 'blueprint_type_id', 'N/A')}"
+            name = (
+                (rx.name if rx and getattr(rx, "name", None) else None)
+                or p.get("name")
+                or f"Reaction {getattr(rx, 'blueprint_type_id', 'N/A')}"
+            )
             per_run_reqs_base = {int(k): int(v) for k, v in (p.get("per_run_requirements") or {}).items()}
             per_run_reqs = apply_me_to_requirements(per_run_reqs_base, me_pct)
             per_run_prods = {int(k): int(v) for k, v in (p.get("per_run_products") or {}).items()}
@@ -761,8 +769,8 @@ class InputView(View):
                     )
 
                 need_missing_display = max(display_required_total - have_used, 0)
-                missing_val_with_broker = unit * Decimal(need_missing_display) * (
-                    Decimal("1") + (broker_fee_pct / Decimal("100"))
+                missing_val_with_broker = (
+                    unit * Decimal(need_missing_display) * (Decimal("1") + (broker_fee_pct / Decimal("100")))
                 )
                 m3_per_run = Decimal(need_per_run) * Decimal(getattr(et, "volume", 0) or 0)
                 m3_total = Decimal(required_total) * Decimal(getattr(et, "volume", 0) or 0)
@@ -883,9 +891,11 @@ class InputView(View):
                 "product_stats": {
                     "value": f"{produced_value_display:,.2f}",
                     "m3": f"{produced_volume_display:,.2f}",
-                    "isk_per_m3": f"{(produced_value_display / produced_volume_display):,.2f}"
-                    if produced_volume_display > 0
-                    else "0.00",
+                    "isk_per_m3": (
+                        f"{(produced_value_display / produced_volume_display):,.2f}"
+                        if produced_volume_display > 0
+                        else "0.00"
+                    ),
                 },
                 "product_ids": [int(t) for t in per_run_prods.keys()],
                 "requirement_ids": [int(t) for t in per_run_reqs.keys()],
@@ -951,7 +961,12 @@ class InputView(View):
                 if r_fd <= 0:
                     continue
                 step_fd, cur_after_step1, profit = build_step(
-                    fd, r_fd, cur_after_step1, profit, supplemental_supply=None, origin_stock_remaining=origin_stock_remaining
+                    fd,
+                    r_fd,
+                    cur_after_step1,
+                    profit,
+                    supplemental_supply=None,
+                    origin_stock_remaining=origin_stock_remaining,
                 )
                 step_fd["is_feeder"] = True
                 produced_map = {int(t): int(q * r_fd) for t, q in (fd.get("per_run_products") or {}).items()}
@@ -980,7 +995,12 @@ class InputView(View):
                 continue
 
             step1, cur_after_step1, profit = build_step(
-                gp, r1, cur_after_step1, profit, supplemental_supply=feeder_supply, origin_stock_remaining=origin_stock_remaining
+                gp,
+                r1,
+                cur_after_step1,
+                profit,
+                supplemental_supply=feeder_supply,
+                origin_stock_remaining=origin_stock_remaining,
             )
             step1["children"] = list(feeder_steps_for_parent or [])
             step1["has_children"] = bool(step1["children"])
@@ -990,7 +1010,9 @@ class InputView(View):
             rendered[-1]["children"] = step1["children"]
             rendered[-1]["has_children"] = step1["has_children"]
 
-            def _would_self_loop(refined_from_step: Dict[int, int], prev_plan: dict, stock_snapshot: Dict[int, int]) -> bool:
+            def _would_self_loop(
+                refined_from_step: Dict[int, int], prev_plan: dict, stock_snapshot: Dict[int, int]
+            ) -> bool:
                 if not refined_from_step:
                     return False
                 prev_inputs = {int(t) for t, n in prev_plan["per_run_requirements"].items() if int(n) > 0}
@@ -1017,7 +1039,13 @@ class InputView(View):
                 for rtid, rqty in refined_add.items():
                     cur_after_step1[int(rtid)] = int(cur_after_step1.get(int(rtid), 0)) + int(rqty)
 
-                re_step = build_reprocess_step(unrefined_used=unref_used, refined_add=refined_add, type_map=type_map, input_basis=input_basis, output_basis=output_basis)
+                re_step = build_reprocess_step(
+                    unrefined_used=unref_used,
+                    refined_add=refined_add,
+                    type_map=type_map,
+                    input_basis=input_basis,
+                    output_basis=output_basis,
+                )
                 re_step["cumulative_profit"] = profit
                 re_step["cumulative_profit_display"] = f"{profit:,.2f}"
                 rendered.append(re_step)
@@ -1046,12 +1074,16 @@ class InputView(View):
             if best:
                 p2, r2 = best
                 cur2 = dict(cur_after_step1)
-                step2, cur_after2, profit2 = build_step(p2, r2, cur2, profit, origin_stock_remaining=origin_stock_remaining)
+                step2, cur_after2, profit2 = build_step(
+                    p2, r2, cur2, profit, origin_stock_remaining=origin_stock_remaining
+                )
                 rendered.append(step2)
                 picked_any = True
 
                 p2_products = {int(t): int(q * r2) for t, q in p2["per_run_products"].items()}
-                refined_add_2, unref_used_2 = reprocess_unrefined_in_stock(p2_products, unrefined_refine_rate, type_map)
+                refined_add_2, unref_used_2 = reprocess_unrefined_in_stock(
+                    p2_products, unrefined_refine_rate, type_map
+                )
                 if refined_add_2:
                     for utid, uqty in unref_used_2.items():
                         cur_after2[int(utid)] = max(0, int(cur_after2.get(int(utid), 0)) - int(uqty))
@@ -1089,7 +1121,9 @@ class InputView(View):
                             prev_inputs_set = {
                                 int(t) for t, n in prev_step_plan["per_run_requirements"].items() if int(n) > 0
                             }
-                            rcap_local = runcap_with_present(stock_snapshot, plan_next["per_run_requirements"], type_map)
+                            rcap_local = runcap_with_present(
+                                stock_snapshot, plan_next["per_run_requirements"], type_map
+                            )
                             if rcap_local <= 0:
                                 return False
                             for t, need in plan_next["per_run_requirements"].items():
@@ -1111,7 +1145,10 @@ class InputView(View):
                         rN = runcap_with_present(cur_stock, pn["per_run_requirements"], type_map)
                         if rN <= 0:
                             continue
-                        keyN = (produces_unrefined(pn, type_map), self_recovery_loss(pn, unrefined_refine_rate, type_map))
+                        keyN = (
+                            produces_unrefined(pn, type_map),
+                            self_recovery_loss(pn, unrefined_refine_rate, type_map),
+                        )
                         if bestN is None or keyN < bestN_key:
                             bestN = (pn, rN)
                             bestN_key = keyN
@@ -1121,11 +1158,15 @@ class InputView(View):
 
                     pn, rN = bestN
                     cur_tmp = dict(cur_stock)
-                    stepN, cur_afterN, profitN = build_step(pn, rN, cur_tmp, cur_profit, origin_stock_remaining=origin_stock_remaining)
+                    stepN, cur_afterN, profitN = build_step(
+                        pn, rN, cur_tmp, cur_profit, origin_stock_remaining=origin_stock_remaining
+                    )
                     rendered.append(stepN)
 
                     pn_products = {int(t): int(q * rN) for t, q in pn["per_run_products"].items()}
-                    refined_add_N, unref_used_N = reprocess_unrefined_in_stock(pn_products, unrefined_refine_rate, type_map)
+                    refined_add_N, unref_used_N = reprocess_unrefined_in_stock(
+                        pn_products, unrefined_refine_rate, type_map
+                    )
                     if refined_add_N:
                         for utid, uqty in unref_used_N.items():
                             cur_afterN[int(utid)] = max(0, int(cur_afterN.get(int(utid), 0)) - int(uqty))
@@ -1133,14 +1174,20 @@ class InputView(View):
                             cur_afterN[int(rtid)] = int(cur_afterN.get(int(rtid), 0)) + int(rqty)
 
                         re_step_N = build_reprocess_step(
-                            unrefined_used=unref_used_N, refined_add=refined_add_N, type_map=type_map, input_basis=input_basis, output_basis=output_basis
+                            unrefined_used=unref_used_N,
+                            refined_add=refined_add_N,
+                            type_map=type_map,
+                            input_basis=input_basis,
+                            output_basis=output_basis,
                         )
                         re_step_N["cumulative_profit"] = profitN
                         re_step_N["cumulative_profit_display"] = f"{profitN:,.2f}"
                         rendered.append(re_step_N)
                         next_allowed = {int(t) for t in refined_add_N.keys() if not is_fuel_id(type_map, int(t))}
                     else:
-                        next_allowed = {int(t) for t in pn["per_run_products"].keys() if not is_fuel_id(type_map, int(t))}
+                        next_allowed = {
+                            int(t) for t in pn["per_run_products"].keys() if not is_fuel_id(type_map, int(t))
+                        }
 
                     cur_stock = cur_afterN
                     cur_profit = profitN
@@ -1159,14 +1206,18 @@ class InputView(View):
                 final_m3 = Decimal("0")
             final_fees = sum(Decimal(s["fees_display"].replace(",", "")) for s in rendered)
 
-            total_needed_m3 = sum(dec_from(step.get("input_totals", {}).get("m3_need_total", "0")) for step in rendered)
+            total_needed_m3 = sum(
+                dec_from(step.get("input_totals", {}).get("m3_need_total", "0")) for step in rendered
+            )
             total_needed_cost = sum(dec_from(step.get("input_totals", {}).get("need_value", "0")) for step in rendered)
             total_stock_value_used = sum(dec_from(s.get("stock_value_used", "0")) for s in rendered)
             total_time_seconds = sum(s.get("time_total_seconds", 0) for s in rendered)
-            final_profit = (final_value - final_fees - total_needed_cost - total_stock_value_used) if rendered else Decimal("0")
+            final_profit = (
+                (final_value - final_fees - total_needed_cost - total_stock_value_used) if rendered else Decimal("0")
+            )
             debug_chain = {
                 "notes": "Final Profit = Final Value − Final Fees − Total Need Cost − Stock Value Used. "
-                         "Final Fees = ∑(per-step input fees). Output side uses broker only for Buy, broker+sales tax for Sell.",
+                "Final Fees = ∑(per-step input fees). Output side uses broker only for Buy, broker+sales tax for Sell.",
                 "variables": {
                     "total_needed_cost": f"{total_needed_cost:,.2f}",
                     "total_stock_value_used": f"{total_stock_value_used:,.2f}",
@@ -1178,24 +1229,26 @@ class InputView(View):
                     "broker_fee_pct": f"{broker_fee_pct:.2f}%",
                     "sales_tax_pct": f"{stax_pct:.2f}%",
                     "output_price_basis": output_basis.title(),
-                    "step_fee_source": "EVE Ref total_job_cost where available" if everef_cost_used else "Local formula only",
+                    "step_fee_source": (
+                        "EVE Ref total_job_cost where available" if everef_cost_used else "Local formula only"
+                    ),
                 },
                 "formulas": {
                     "per_step_input_fees": (
                         "Per-step input fees = EVE Ref total_job_cost"
                         if everef_cost_used
                         else f"Per-step input fees = Consumed Cost × "
-                             f"({scc_pct:.2f}% + {facility_tax_pct:.2f}% + {cost_index_pct:.3f}%)"
+                        f"({scc_pct:.2f}% + {facility_tax_pct:.2f}% + {cost_index_pct:.3f}%)"
                     )
                     + f" → Final Fees = ∑ steps = {final_fees:,.2f}",
                     "produced_net_buy": f"Buy: {final_value:,.2f} × (1 − {broker_fee_pct:.2f}%) = "
-                                        f"{(final_value * (Decimal('1') - broker_fee_pct / Decimal('100'))):,.2f}",
+                    f"{(final_value * (Decimal('1') - broker_fee_pct / Decimal('100'))):,.2f}",
                     "produced_net_sell": f"Sell: {final_value:,.2f} × (1 − ({broker_fee_pct:.2f}% + {stax_pct:.2f}%)) = "
-                                         f"{(final_value * (Decimal('1') - (broker_fee_pct + stax_pct) / Decimal('100'))):,.2f}",
+                    f"{(final_value * (Decimal('1') - (broker_fee_pct + stax_pct) / Decimal('100'))):,.2f}",
                     "final_profit": "Final Profit = Final Value − Final Fees − Total Need Cost − Stock Value Used",
                     "final_profit_numeric": f"{final_value:,.2f} − {final_fees:,.2f} − "
-                                            f"{total_needed_cost:,.2f} − {total_stock_value_used:,.2f} = "
-                                            f"{final_profit:,.2f}",
+                    f"{total_needed_cost:,.2f} − {total_stock_value_used:,.2f} = "
+                    f"{final_profit:,.2f}",
                 },
             }
             final_profit_unformatted = final_profit
@@ -1277,7 +1330,9 @@ class InputView(View):
             "direct_inputs": direct_inputs_rows,
             "direct_inputs_totals": {"value": f"{direct_inputs_total:,.2f}", "m3": f"{direct_inputs_total_m3:,.2f}"},
             "selected_system_name": selected_system_name,
-            "selected_reaction_index_pct": f"{selected_reaction_index_pct:,.3f}%" if selected_reaction_index_pct is not None else None,
+            "selected_reaction_index_pct": (
+                f"{selected_reaction_index_pct:,.3f}%" if selected_reaction_index_pct is not None else None
+            ),
             "unrefinables": unrefinables,
             "unrefinables_total": {"value": f"{unref_total_val:,.2f}"},
         }

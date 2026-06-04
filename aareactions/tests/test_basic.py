@@ -1,15 +1,23 @@
+# Standard Library
 from decimal import Decimal
 from unittest.mock import patch
 
+# Django
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase
 
+# Alliance Auth (External Libs)
 from eve_sde.models import ItemType
 
+# aa-reactions
 from aareactions.helper import effective_time_seconds, te_bonus_pct
 from aareactions.models import Reaction, ReactionSettings, SystemIndices, UserReactionSettings
-from aareactions.providers import build_reaction_cost_params, default_reaction_structure_type_id, parse_reaction_rig_ids
+from aareactions.providers import (
+    build_reaction_cost_params,
+    default_reaction_structure_type_id,
+    parse_reaction_rig_ids,
+)
 from aareactions.views import InputView, solar_system_reaction_index, split_runs_across_slots
 
 
@@ -104,24 +112,17 @@ class InputViewStepDisplayTests(TestCase):
         request = self.factory.post("/aareactions/", data=self._post_data())
         request.user = self.user
 
-        with patch("aareactions.views.render", side_effect=fake_render), patch(
-            "aareactions.views.parse_input_lines", return_value=[]
-        ), patch(
-            "aareactions.views.resolve_types", return_value=[]
-        ), patch(
-            "aareactions.views.categorize_items", return_value=[]
-        ), patch(
-            "aareactions.views.filter_by_settings", return_value=[]
-        ), patch(
-            "aareactions.views.build_initial_stock", return_value=(stock, [])
-        ), patch(
-            "aareactions.views.plan_reactions_with_chain", return_value=plans
-        ), patch(
-            "aareactions.views.price_input", side_effect=price_in
-        ), patch(
-            "aareactions.views.price_output", side_effect=price_out
-        ), patch(
-            "aareactions.views.get_reaction_cost", return_value=None
+        with (
+            patch("aareactions.views.render", side_effect=fake_render),
+            patch("aareactions.views.parse_input_lines", return_value=[]),
+            patch("aareactions.views.resolve_types", return_value=[]),
+            patch("aareactions.views.categorize_items", return_value=[]),
+            patch("aareactions.views.filter_by_settings", return_value=[]),
+            patch("aareactions.views.build_initial_stock", return_value=(stock, [])),
+            patch("aareactions.views.plan_reactions_with_chain", return_value=plans),
+            patch("aareactions.views.price_input", side_effect=price_in),
+            patch("aareactions.views.price_output", side_effect=price_out),
+            patch("aareactions.views.get_reaction_cost", return_value=None),
         ):
             response = InputView.as_view()(request)
 
@@ -160,25 +161,20 @@ class InputViewStepDisplayTests(TestCase):
         request = self.factory.post("/aareactions/", data=self._post_data())
         request.user = self.user
 
-        with patch("aareactions.views.render", side_effect=fake_render), patch(
-            "aareactions.views.parse_input_lines", return_value=[]
-        ), patch(
-            "aareactions.views.resolve_types", return_value=[]
-        ), patch(
-            "aareactions.views.categorize_items", return_value=[]
-        ), patch(
-            "aareactions.views.filter_by_settings", return_value=[]
-        ), patch(
-            "aareactions.views.build_initial_stock", return_value=(stock, [])
-        ), patch(
-            "aareactions.views.plan_reactions_with_chain", return_value=plans
-        ), patch(
-            "aareactions.views.price_input", return_value=Decimal("10.00")
-        ), patch(
-            "aareactions.views.price_output", return_value=Decimal("100.00")
-        ), patch(
-            "aareactions.views.get_reaction_cost",
-            return_value={"total_job_cost": Decimal("42.00"), "query_params": []},
+        with (
+            patch("aareactions.views.render", side_effect=fake_render),
+            patch("aareactions.views.parse_input_lines", return_value=[]),
+            patch("aareactions.views.resolve_types", return_value=[]),
+            patch("aareactions.views.categorize_items", return_value=[]),
+            patch("aareactions.views.filter_by_settings", return_value=[]),
+            patch("aareactions.views.build_initial_stock", return_value=(stock, [])),
+            patch("aareactions.views.plan_reactions_with_chain", return_value=plans),
+            patch("aareactions.views.price_input", return_value=Decimal("10.00")),
+            patch("aareactions.views.price_output", return_value=Decimal("100.00")),
+            patch(
+                "aareactions.views.get_reaction_cost",
+                return_value={"total_job_cost": Decimal("42.00"), "query_params": []},
+            ),
         ):
             response = InputView.as_view()(request)
 
@@ -223,9 +219,10 @@ class InputViewStepDisplayTests(TestCase):
         request = self.factory.get("/aareactions/")
         request.user = self.user
 
-        with patch("aareactions.views.render", side_effect=fake_render), patch(
-            "aareactions.views.EveSolarSystem.objects.only"
-        ) as mock_only:
+        with (
+            patch("aareactions.views.render", side_effect=fake_render),
+            patch("aareactions.views.EveSolarSystem.objects.only") as mock_only,
+        ):
             mock_only.return_value.get.return_value.name = "Jita"
             response = InputView.as_view()(request)
 
@@ -259,24 +256,17 @@ class InputViewStepDisplayTests(TestCase):
         request = self.factory.post("/aareactions/", data=self._post_data())
         request.user = self.user
 
-        with patch("aareactions.views.render", side_effect=fake_render), patch(
-            "aareactions.views.parse_input_lines", return_value=[]
-        ), patch(
-            "aareactions.views.resolve_types", return_value=[]
-        ), patch(
-            "aareactions.views.categorize_items", return_value=[]
-        ), patch(
-            "aareactions.views.filter_by_settings", return_value=[]
-        ), patch(
-            "aareactions.views.build_initial_stock", return_value=(stock, [])
-        ), patch(
-            "aareactions.views.plan_reactions_with_chain", return_value=plans
-        ), patch(
-            "aareactions.views.price_input", return_value=Decimal("10.00")
-        ), patch(
-            "aareactions.views.price_output", return_value=Decimal("100.00")
-        ), patch(
-            "aareactions.views.get_reaction_cost", return_value=None
+        with (
+            patch("aareactions.views.render", side_effect=fake_render),
+            patch("aareactions.views.parse_input_lines", return_value=[]),
+            patch("aareactions.views.resolve_types", return_value=[]),
+            patch("aareactions.views.categorize_items", return_value=[]),
+            patch("aareactions.views.filter_by_settings", return_value=[]),
+            patch("aareactions.views.build_initial_stock", return_value=(stock, [])),
+            patch("aareactions.views.plan_reactions_with_chain", return_value=plans),
+            patch("aareactions.views.price_input", return_value=Decimal("10.00")),
+            patch("aareactions.views.price_output", return_value=Decimal("100.00")),
+            patch("aareactions.views.get_reaction_cost", return_value=None),
         ):
             response = InputView.as_view()(request)
 
@@ -313,24 +303,17 @@ class InputViewStepDisplayTests(TestCase):
         request = self.factory.post("/aareactions/", data=post_data)
         request.user = self.user
 
-        with patch("aareactions.views.render", side_effect=fake_render), patch(
-            "aareactions.views.parse_input_lines", return_value=[]
-        ), patch(
-            "aareactions.views.resolve_types", return_value=[]
-        ), patch(
-            "aareactions.views.categorize_items", return_value=[]
-        ), patch(
-            "aareactions.views.filter_by_settings", return_value=[]
-        ), patch(
-            "aareactions.views.build_initial_stock", return_value=(stock, [])
-        ), patch(
-            "aareactions.views.plan_reactions_with_chain", return_value=plans
-        ), patch(
-            "aareactions.views.price_input", return_value=Decimal("10.00")
-        ), patch(
-            "aareactions.views.price_output", return_value=Decimal("100.00")
-        ), patch(
-            "aareactions.views.get_reaction_cost", return_value=None
+        with (
+            patch("aareactions.views.render", side_effect=fake_render),
+            patch("aareactions.views.parse_input_lines", return_value=[]),
+            patch("aareactions.views.resolve_types", return_value=[]),
+            patch("aareactions.views.categorize_items", return_value=[]),
+            patch("aareactions.views.filter_by_settings", return_value=[]),
+            patch("aareactions.views.build_initial_stock", return_value=(stock, [])),
+            patch("aareactions.views.plan_reactions_with_chain", return_value=plans),
+            patch("aareactions.views.price_input", return_value=Decimal("10.00")),
+            patch("aareactions.views.price_output", return_value=Decimal("100.00")),
+            patch("aareactions.views.get_reaction_cost", return_value=None),
         ):
             response = InputView.as_view()(request)
 

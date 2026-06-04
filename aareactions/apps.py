@@ -3,6 +3,7 @@
 # Django
 from django.apps import AppConfig
 
+# aa-reactions
 from aareactions import __version__
 
 

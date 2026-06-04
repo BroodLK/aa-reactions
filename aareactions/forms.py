@@ -1,4 +1,5 @@
 # file: aareactions/forms.py
+# Django
 from django import forms
 
 INPUT_BASIS_CHOICES = (("buy", "Buy"), ("sell", "Sell"))
@@ -7,6 +8,7 @@ FACILITY_SIZE_CHOICES = (("medium", "Medium"), ("large", "Large"))
 FACILITY_LOCATION_CHOICES = (("low", "Low"), ("null", "Null"), ("wh", "WH"))
 RIG_ME_CHOICES = (("none", "None"), ("t1", "T1 ME"), ("t2", "T2 ME"))
 RIG_TE_CHOICES = (("none", "None"), ("t1", "T1 TE"), ("t2", "T2 TE"))
+
 
 class InputForm(forms.Form):
     lines = forms.CharField(
@@ -164,7 +166,4 @@ class InputForm(forms.Form):
         required=False,
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
-    solar_system_id = forms.IntegerField(
-        required=False,
-        widget=forms.HiddenInput()
-    )
+    solar_system_id = forms.IntegerField(required=False, widget=forms.HiddenInput())

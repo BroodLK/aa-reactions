@@ -1,18 +1,18 @@
-# Third Party
-from allianceauth.services.hooks import get_extension_logger
-
 # Django
 from django.db import transaction
 from django.utils import timezone
 
+# Alliance Auth
+from allianceauth.services.hooks import get_extension_logger
+
 # Alliance Auth (External Libs)
 from eve_sde.models import ItemType as EveType
 
+# aa-reactions
 # aareactions
 from aareactions import app_settings
 from aareactions.models import EveTypePrice
 from aareactions.pricing import fetch_price_map, is_zero_price_tuple
-
 
 logger = get_extension_logger(__name__)
 
@@ -24,9 +24,7 @@ def chunk_ids(values, chunk_size):
 
 def seed_all_price_rows():
     eve_type_ids = list(EveType.objects.values_list("id", flat=True))
-    existing_ids = set(
-        EveTypePrice.objects.filter(eve_type_id__in=eve_type_ids).values_list("eve_type_id", flat=True)
-    )
+    existing_ids = set(EveTypePrice.objects.filter(eve_type_id__in=eve_type_ids).values_list("eve_type_id", flat=True))
     to_create = [EveTypePrice(eve_type_id=type_id) for type_id in eve_type_ids if type_id not in existing_ids]
 
     created = 0

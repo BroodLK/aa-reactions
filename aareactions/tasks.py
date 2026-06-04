@@ -1,9 +1,12 @@
 """Celery tasks for aareactions."""
 
 # Third Party
-from allianceauth.services.hooks import get_extension_logger
 from celery import shared_task
 
+# Alliance Auth
+from allianceauth.services.hooks import get_extension_logger
+
+# aa-reactions
 # aareactions
 from aareactions import app_settings
 from aareactions.models import CharacterToken
@@ -14,9 +17,8 @@ from aareactions.task_helpers.characters import (
 )
 from aareactions.task_helpers.pricing import (
     refresh_all_price_rows,
-    seed_all_price_rows as seed_price_rows,
 )
-
+from aareactions.task_helpers.pricing import seed_all_price_rows as seed_price_rows
 
 logger = get_extension_logger(__name__)
 

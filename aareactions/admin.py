@@ -1,6 +1,16 @@
+# Django
 from django import forms
 from django.contrib import admin
-from .models import ReactionSettings, Reaction, ReactionMaterial, ReactionProduct, EveTypePrice, CharacterToken, CharacterReactions, CharacterStandings
+
+from .models import (
+    CharacterReactions,
+    CharacterStandings,
+    EveTypePrice,
+    Reaction,
+    ReactionMaterial,
+    ReactionProduct,
+    ReactionSettings,
+)
 
 
 class ReactionSettingsForm(forms.ModelForm):
@@ -97,6 +107,7 @@ class EveTypePriceAdmin(admin.ModelAdmin):
     list_display = ("eve_type", "buy", "sell", "buy_average", "sell_average", "updated")
     search_fields = ("eve_type__name", "eve_type__id")
 
+
 @admin.register(CharacterReactions)
 class CharacterReactionsAdmin(admin.ModelAdmin):
     list_display = (
@@ -128,6 +139,7 @@ class CharacterReactionsAdmin(admin.ModelAdmin):
         "scrap_metal_processing_level",
     )
     search_fields = ("character__character__character_name", "character__character__character_id")
+
 
 @admin.register(CharacterStandings)
 class CharacterStandingsAdmin(admin.ModelAdmin):
