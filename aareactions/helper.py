@@ -64,6 +64,15 @@ def _clean_name_fragment(s: str) -> str:
     return s
 
 
+def _looks_like_number_token(tok: str) -> bool:
+    token = (tok or "").strip()
+    if not token:
+        return False
+    if re.fullmatch(r"[\d,._kKmMbB+-]+", token):
+        return True
+    return bool(re.fullmatch(r"[\d,._+-]+(?:\s*(?:m3|isk))?", token, flags=re.IGNORECASE))
+
+
 def parse_input_lines(raw: str) -> List[Tuple[str, int]]:
     if not raw:
         return []
@@ -81,6 +90,15 @@ def parse_input_lines(raw: str) -> List[Tuple[str, int]]:
         line = (raw_line or "").strip()
         if not line:
             continue
+
+        columns = [chunk.strip() for chunk in re.split(r"\t+|\s{2,}|\|", line) if chunk.strip()]
+        if len(columns) >= 2 and not _looks_like_number_token(columns[0]) and _looks_like_number_token(columns[1]):
+            add(columns[0], _parse_number_token(columns[1]))
+            continue
+        if len(columns) >= 2 and _looks_like_number_token(columns[0]) and not _looks_like_number_token(columns[1]):
+            add(columns[1], _parse_number_token(columns[0]))
+            continue
+
         line = line.replace("\t", " ")
         line = re.sub(r"\s+", " ", line).strip()
 

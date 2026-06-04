@@ -11,7 +11,7 @@ from django.test import RequestFactory, TestCase
 from eve_sde.models import ItemType
 
 # aa-reactions
-from aareactions.helper import effective_time_seconds, te_bonus_pct
+from aareactions.helper import effective_time_seconds, parse_input_lines, te_bonus_pct
 from aareactions.models import Reaction, ReactionSettings, SystemIndices, UserReactionSettings
 from aareactions.providers import (
     build_reaction_cost_params,
@@ -331,7 +331,9 @@ class InputViewStepDisplayTests(TestCase):
         self.assertEqual(runs_per_slot.count(1), 49)
         self.assertEqual(step["time_batches"], max(runs_per_slot))
         self.assertEqual(step["runs_per_slot"], runs_per_slot)
-        self.assertEqual(step["runs_per_slot_display"], "[{0}]".format(", ".join(str(run_count) for run_count in runs_per_slot)))
+        self.assertEqual(
+            step["runs_per_slot_display"], "[{0}]".format(", ".join(str(run_count) for run_count in runs_per_slot))
+        )
         self.assertEqual(step["runs_per_slot_total"], sum(runs_per_slot))
         expected_per_run_time = int(effective_time_seconds(60, 5, "medium", te_bonus_pct("none", "low")))
         self.assertEqual(step["time_total_seconds"], expected_per_run_time * max(runs_per_slot))
@@ -392,6 +394,27 @@ class InputViewStepDisplayTests(TestCase):
                 }
             ],
         )
+
+
+class InputParsingTests(TestCase):
+    def test_parse_input_lines_accepts_export_style_rows(self):
+        raw = (
+            "Cadmium\t287,140\tMoon Materials\t\t\t14,357 m3\t1,367,756,933.20 ISK\n"
+            "Chromium\t400,279\tMoon Materials\t\t\t20,013.95 m3\t2,424,365,816.51 ISK\n"
+            "Platinum\t116,906\tMoon Materials\t\t\t5,845.30 m3\t807,158,772.04 ISK"
+        )
+
+        self.assertEqual(
+            parse_input_lines(raw),
+            [
+                ("Cadmium", 287140),
+                ("Chromium", 400279),
+                ("Platinum", 116906),
+            ],
+        )
+
+    def test_parse_input_lines_keeps_type_id_quantity_format(self):
+        self.assertEqual(parse_input_lines("34, 250000\n35, 1500"), [("34", 250000), ("35", 1500)])
 
 
 class EveRefProviderTests(TestCase):
