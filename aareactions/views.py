@@ -797,6 +797,7 @@ class InputView(View):
 
                 inputs.append(
                     {
+                        "type_id": int(tid),
                         "name": et.name if et else str(tid),
                         "need_per_run": int(need_per_run),
                         "have": int(have_used),
@@ -805,9 +806,11 @@ class InputView(View):
                         "unit_price": f"{unit:,.2f}",
                         "have_value": f"{have_val:,.2f}",
                         "need_value": f"{missing_val_with_broker:,.2f}",
+                        "need_value_raw": missing_val_with_broker,
                         "m3_per_run": f"{m3_per_run:,.2f}",
                         "m3_total": f"{m3_total:,.2f}",
                         "m3_need": f"{m3_need:,.2f}",
+                        "m3_need_raw": m3_need,
                         "from_children": int(from_children),
                         "from_stock": int(from_stock),
                         "produced": False,
@@ -863,6 +866,8 @@ class InputView(View):
                 "runs": runs,
                 "number_of_slots": number_of_slots,
                 "time_batches": step_batches,
+                "runs_per_slot": runs_per_slot,
+                "runs_per_slot_display": "[{0}]".format(", ".join(str(run_count) for run_count in runs_per_slot)),
                 "runs_per_slot_total": sum(runs_per_slot),
                 "inputs": inputs,
                 "product_name": product_name,
@@ -1205,6 +1210,33 @@ class InputView(View):
                 final_value = Decimal("0")
                 final_m3 = Decimal("0")
             final_fees = sum(Decimal(s["fees_display"].replace(",", "")) for s in rendered)
+            buy_list_summary = {}
+            for step in rendered:
+                if step.get("kind") != "reaction":
+                    continue
+                for item in step.get("inputs", []):
+                    need_missing = int(item.get("need_missing", 0) or 0)
+                    if need_missing <= 0:
+                        continue
+                    type_id = int(item.get("type_id", 0) or 0)
+                    if type_id not in buy_list_summary:
+                        buy_list_summary[type_id] = {
+                            "type_id": type_id,
+                            "name": item.get("name") or str(type_id),
+                            "qty": 0,
+                            "value_raw": Decimal("0"),
+                            "m3_raw": Decimal("0"),
+                        }
+                    buy_list_summary[type_id]["qty"] += need_missing
+                    buy_list_summary[type_id]["value_raw"] += Decimal(item.get("need_value_raw") or Decimal("0"))
+                    buy_list_summary[type_id]["m3_raw"] += Decimal(item.get("m3_need_raw") or Decimal("0"))
+            buy_list_rows = sorted(
+                buy_list_summary.values(),
+                key=lambda row: (row["value_raw"], row["qty"]),
+                reverse=True,
+            )
+            buy_list_total_value = sum(row["value_raw"] for row in buy_list_rows)
+            buy_list_total_m3 = sum(row["m3_raw"] for row in buy_list_rows)
 
             total_needed_m3 = sum(
                 dec_from(step.get("input_totals", {}).get("m3_need_total", "0")) for step in rendered
@@ -1298,6 +1330,18 @@ class InputView(View):
                     "profit_per_m3": f"{profit_per_m3:.2f}",
                     "profit_per_m3_unformatted": profit_per_m3,
                     "cost_per_m3": f"{cost_per_m3:.2f}",
+                    "buy_list_summary": [
+                        {
+                            "type_id": row["type_id"],
+                            "name": row["name"],
+                            "qty": row["qty"],
+                            "value": f"{row['value_raw']:,.2f}",
+                            "m3": f"{row['m3_raw']:,.2f}",
+                        }
+                        for row in buy_list_rows
+                    ],
+                    "buy_list_total_value": f"{buy_list_total_value:,.2f}",
+                    "buy_list_total_m3": f"{buy_list_total_m3:,.2f}",
                     "debug_fees_explained": debug_chain,
                 }
             )

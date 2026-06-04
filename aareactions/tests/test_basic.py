@@ -133,6 +133,8 @@ class InputViewStepDisplayTests(TestCase):
         self.assertEqual(step["runs"], 1)
         self.assertEqual(step["produced_qty"], 5)
         self.assertEqual(step["product_stats"]["value"], "500.00")
+        self.assertEqual(step["runs_per_slot"], [1])
+        self.assertEqual(step["runs_per_slot_display"], "[1]")
 
         inputs_by_name = {row["name"]: row for row in step["inputs"]}
         self.assertEqual(inputs_by_name["Input A"]["have"], 10)
@@ -328,10 +330,68 @@ class InputViewStepDisplayTests(TestCase):
         self.assertEqual(runs_per_slot.count(2), 1)
         self.assertEqual(runs_per_slot.count(1), 49)
         self.assertEqual(step["time_batches"], max(runs_per_slot))
+        self.assertEqual(step["runs_per_slot"], runs_per_slot)
+        self.assertEqual(step["runs_per_slot_display"], "[{0}]".format(", ".join(str(run_count) for run_count in runs_per_slot)))
         self.assertEqual(step["runs_per_slot_total"], sum(runs_per_slot))
         expected_per_run_time = int(effective_time_seconds(60, 5, "medium", te_bonus_pct("none", "low")))
         self.assertEqual(step["time_total_seconds"], expected_per_run_time * max(runs_per_slot))
         self.assertEqual(chain["total_time_seconds"], expected_per_run_time * max(runs_per_slot))
+
+    def test_final_card_includes_buy_list_summary(self):
+        captured = {}
+        stock = {1: 10, 4: 0}
+        plans = [
+            {
+                "name": "Fuel Hungry Reaction",
+                "blueprint_type_id": 9001,
+                "time_seconds": 60,
+                "per_run_requirements": {1: 10, 4: 2},
+                "per_run_products": {3: 5},
+                "have_any": True,
+            }
+        ]
+
+        def fake_render(_request, _template_name, context):
+            captured["context"] = context
+            return HttpResponse("ok")
+
+        ItemType.objects.create(id=4, name="Helium Fuel Block", portion_size=1, volume=5.0, published=True)
+        request = self.factory.post("/aareactions/", data=self._post_data())
+        request.user = self.user
+
+        def price_in(tid, _basis):
+            return {1: Decimal("10.00"), 4: Decimal("25.00")}.get(int(tid), Decimal("0"))
+
+        with (
+            patch("aareactions.views.render", side_effect=fake_render),
+            patch("aareactions.views.parse_input_lines", return_value=[]),
+            patch("aareactions.views.resolve_types", return_value=[]),
+            patch("aareactions.views.categorize_items", return_value=[]),
+            patch("aareactions.views.filter_by_settings", return_value=[]),
+            patch("aareactions.views.build_initial_stock", return_value=(stock, [])),
+            patch("aareactions.views.plan_reactions_with_chain", return_value=plans),
+            patch("aareactions.views.price_input", side_effect=price_in),
+            patch("aareactions.views.price_output", return_value=Decimal("100.00")),
+            patch("aareactions.views.get_reaction_cost", return_value=None),
+        ):
+            response = InputView.as_view()(request)
+
+        self.assertEqual(response.status_code, 200)
+        chain = captured["context"]["chain_groups"][0][1][0]
+        self.assertEqual(chain["buy_list_total_value"], "51.50")
+        self.assertEqual(chain["buy_list_total_m3"], "10.00")
+        self.assertEqual(
+            chain["buy_list_summary"],
+            [
+                {
+                    "type_id": 4,
+                    "name": "Helium Fuel Block",
+                    "qty": 2,
+                    "value": "51.50",
+                    "m3": "10.00",
+                }
+            ],
+        )
 
 
 class EveRefProviderTests(TestCase):

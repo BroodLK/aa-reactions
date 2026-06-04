@@ -217,6 +217,9 @@
                             <span class="ms-1">({{ step.time_batches }} batches across {{ step.number_of_slots }} slots)</span>
                             {% endif %}
                             </div>
+                            {% if step.kind == 'reaction' and step.runs_per_slot %}
+                            <div class="small text-muted mb-2">Runs per slot: <span class="text-muted">{{ step.runs_per_slot_display }}</span></div>
+                            {% endif %}
                             <div class="mb-2 fw-semibold">Inputs</div>
                             {% for m in step.inputs %}
                             <ul class="ms-0">
@@ -392,6 +395,23 @@
                                 </li>
                                 <li>Cost per m3: <span class="text-danger">{{ c.cost_per_m3|intcomma }}</span></li>
                             </ul>
+                            {% if c.buy_list_summary %}
+                            <hr class="my-3">
+                            <div class="fw-semibold mb-2">Buy List Summary</div>
+                            <ul class="mb-0">
+                                <li>Total Buy Cost: <span class="text-danger">{{ c.buy_list_total_value }}</span></li>
+                                <li>Total Buy m3: <span class="text-muted">{{ c.buy_list_total_m3 }}</span></li>
+                            </ul>
+                            <ul class="mt-2 mb-0">
+                                {% for item in c.buy_list_summary %}
+                                <li>{{ item.name }}:
+                                    <span class="text-muted">Qty {{ item.qty|intcomma }}</span>,
+                                    <span class="text-danger">Value {{ item.value }}</span>,
+                                    <span class="text-muted">m3 {{ item.m3 }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
